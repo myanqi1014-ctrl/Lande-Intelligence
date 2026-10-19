@@ -1,1 +1,231 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>兰德集团｜海外招商情报平台</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#f3f6fa;color:#203047;font-family:Arial,"Microsoft YaHei",sans-serif}
+header{background:#102b4c;color:white;padding:22px 5%}
+header h1{margin:0;font-size:25px}
+header p{margin:9px 0 0;color:#b9cce1;font-size:13px}
+nav{background:white;padding:14px 5%;display:flex;gap:12px;flex-wrap:wrap;border-bottom:1px solid #e2e8f0}
+button{cursor:pointer;border:1px solid #d9e1eb;background:white;border-radius:7px;padding:10px 16px;color:#334155}
+button.active,button:hover{background:#1764ad;color:white}
+main{max-width:1250px;margin:auto;padding:25px 20px}
+.notice{background:#fff7e6;padding:12px;border-radius:8px;color:#946200;margin-bottom:20px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:15px}
+.stat,.card,.panel{background:white;border-radius:10px;padding:20px;border:1px solid #e4eaf2}
+.stat strong{display:block;font-size:29px;color:#1764ad;margin-top:12px}
+.stat span{font-size:13px;color:#64748b}
+.toolbar{display:flex;gap:10px;margin:24px 0;flex-wrap:wrap}
+input,select{padding:12px;border:1px solid #d9e1eb;border-radius:7px;font-size:14px}
+input{flex:1;min-width:200px}
+.grid{display:grid;grid-template-columns:2fr 1fr;gap:20px}
+.card{margin-bottom:15px}
+.card h3{margin:10px 0;font-size:18px}
+.tag{display:inline-block;background:#eaf2ff;color:#1764ad;padding:5px 9px;border-radius:5px;font-size:12px;margin-right:6px}
+.date{font-size:12px;color:#94a3b8}
+.card p{line-height:1.8;color:#475569;font-size:14px}
+.analysis{background:#f1f7ff;border-left:3px solid #1764ad;padding:12px;margin-top:12px;font-size:14px;line-height:1.8}
+.action{background:#f0faf4;border-left:3px solid #22a06b;padding:12px;margin-top:10px;font-size:14px;line-height:1.8}
+.panel{margin-bottom:20px}
+.panel h3{margin-top:0}
+.panel p,.panel li{font-size:14px;line-height:1.9;color:#475569}
+.hidden{display:none}
+.empty{padding:35px;text-align:center;color:#64748b}
+footer{text-align:center;padding:30px;color:#94a3b8;font-size:12px}
+@media(max-width:800px){.grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
 
+<body>
+<header>
+<h1>兰德集团｜海外招商情报平台</h1>
+<p>LANDE INTELLIGENCE · 从市场新闻到招商机会</p>
+</header>
+
+<nav>
+<button class="active" onclick="countryChange('全部',this)">全部国家</button>
+<button onclick="countryChange('沙特',this)">沙特阿拉伯</button>
+<button onclick="countryChange('叙利亚',this)">叙利亚</button>
+<button onclick="showPage('news')">招商情报</button>
+<button onclick="showPage('archive')">历史归档</button>
+<button onclick="showPage('weekly')">每周洞察</button>
+</nav>
+
+<main>
+<div class="notice">演示版本：以下内容为虚构业务场景，仅用于展示平台功能，不构成真实新闻、政策解读或投资建议。</div>
+
+<section class="stats">
+<div class="stat"><span>情报总数</span><strong id="total">0</strong></div>
+<div class="stat"><span>政策法规</span><strong id="policy">0</strong></div>
+<div class="stat"><span>中企动态</span><strong id="china">0</strong></div>
+<div class="stat"><span>项目机会</span><strong id="project">0</strong></div>
+</section>
+
+<section id="newsPage">
+<div class="toolbar">
+<input id="search" placeholder="搜索国家、行业、企业、招商机会..." oninput="render()">
+<select id="category" onchange="render()">
+<option value="全部">全部分类</option>
+<option>投资政策</option>
+<option>中企动态</option>
+<option>项目机会</option>
+<option>产业动态</option>
+</select>
+</div>
+
+<div class="grid">
+<div>
+<h2>最新招商情报</h2>
+<div id="newsList"></div>
+</div>
+<aside>
+<div class="panel">
+<h3>情报分类</h3>
+<p>投资政策与法律法规</p>
+<p>中国企业出海动态</p>
+<p>当地重大项目与采购需求</p>
+<p>产业发展与供应链机会</p>
+</div>
+<div class="panel">
+<h3>前台使用指南</h3>
+<p>① 阅读新闻摘要</p>
+<p>② 判断是否涉及目标产业</p>
+<p>③ 查看招商价值</p>
+<p>④ 根据行动建议联系企业</p>
+<p>⑤ 核实信息并记录跟进结果</p>
+</div>
+</aside>
+</div>
+</section>
+
+<section id="archivePage" class="hidden">
+<h2>历史情报归档</h2>
+<div class="panel">
+<p>按时间查看已收录的招商情报。</p>
+<div id="archiveList"></div>
+</div>
+</section>
+
+<section id="weeklyPage" class="hidden">
+<h2>每周招商洞察报告</h2>
+<div class="panel">
+<h3>本周招商情报观察（演示）</h3>
+<p>本报告基于当前演示数据生成，仅用于展示报告结构。</p>
+<h3>一、重点观察方向</h3>
+<ul>
+<li>外资投资准入及经营政策变化</li>
+<li>中国制造业企业海外投资布局</li>
+<li>当地基础设施及工业项目需求</li>
+</ul>
+<h3>二、潜在招商切入点</h3>
+<p>关注具有海外扩张意愿的中国制造业企业，结合目标国家的产业政策、项目需求和供应链缺口开展定向研究。</p>
+<h3>三、建议前台行动</h3>
+<ul>
+<li>筛选重点行业中的潜在出海企业。</li>
+<li>核实项目业主、采购方及投资条件。</li>
+<li>形成企业拜访名单并记录客户反馈。</li>
+</ul>
+<button onclick="window.print()">打印或保存为PDF</button>
+</div>
+</section>
+</main>
+
+<footer>LANDE INTELLIGENCE · 招商情报演示平台</footer>
+
+<script>
+const news=[
+{
+id:1,country:"沙特",category:"投资政策",
+title:"【演示】沙特制造业投资准入政策研究",
+date:"2026-10-19",
+summary:"模拟情报：某项制造业投资政策发生变化，企业需要重新评估准入条件、许可程序及合规成本。",
+value:"可针对计划在沙特设厂的中国制造企业开展政策咨询和投资落地服务。",
+action:"前台可联系有沙特投资意向的企业，了解其拟投资行业、经营模式及政策疑问。"
+},
+{
+id:2,country:"沙特",category:"中企动态",
+title:"【演示】中国工业零部件企业研究沙特建厂",
+date:"2026-10-18",
+summary:"模拟情报：一家中国工业零部件企业正在评估沙特市场，并研究本地生产和销售渠道。",
+value:"可能产生工业园区选址、投资咨询、渠道对接及供应链配套需求。",
+action:"前台可重点了解企业的投资预算、目标客户、产能规划及落地时间。"
+},
+{
+id:3,country:"叙利亚",category:"项目机会",
+title:"【演示】叙利亚基础设施重建项目需求",
+date:"2026-10-17",
+summary:"模拟情报：某基础设施项目正在研究工程建设及设备采购方案。",
+value:"可能涉及建筑材料、工程机械、设计咨询及EPC合作机会。",
+action:"前台应先核实项目业主、资金来源、采购程序及付款保障，再筛选适合的中国企业。"
+},
+{
+id:4,country:"叙利亚",category:"产业动态",
+title:"【演示】叙利亚工业设备供应链需求研究",
+date:"2026-10-16",
+summary:"模拟情报：当地工业生产恢复可能带来设备维修、零部件供应和技术服务需求。",
+value:"可作为筛选中国工业设备供应商和服务商的研究线索。",
+action:"前台可向当地合作伙伴核实具体设备品类、需求数量、付款方式和交付条件。"
+}
+];
+
+let selectedCountry="全部";
+let currentPage="news";
+
+function countryChange(country,button){
+selectedCountry=country;
+document.querySelectorAll("nav button").forEach(b=>b.classList.remove("active"));
+button.classList.add("active");
+render();
+}
+
+function showPage(page){
+currentPage=page;
+document.getElementById("newsPage").classList.toggle("hidden",page!=="news");
+document.getElementById("archivePage").classList.toggle("hidden",page!=="archive");
+document.getElementById("weeklyPage").classList.toggle("hidden",page!=="weekly");
+render();
+}
+
+function filteredNews(){
+const keyword=document.getElementById("search").value.trim().toLowerCase();
+const category=document.getElementById("category").value;
+return news.filter(n=>
+(selectedCountry==="全部"||n.country===selectedCountry)&&
+(category==="全部"||n.category===category)&&
+[n.country,n.category,n.title,n.summary,n.value,n.action].join(" ").toLowerCase().includes(keyword)
+);
+}
+
+function render(){
+const data=filteredNews();
+document.getElementById("total").textContent=data.length;
+document.getElementById("policy").textContent=data.filter(n=>n.category==="投资政策").length;
+document.getElementById("china").textContent=data.filter(n=>n.category==="中企动态").length;
+document.getElementById("project").textContent=data.filter(n=>n.category==="项目机会").length;
+
+document.getElementById("newsList").innerHTML=data.length?
+data.map(n=>`
+<article class="card">
+<span class="tag">${n.country}</span>
+<span class="tag">${n.category}</span>
+<span class="date">${n.date}</span>
+<h3>${n.title}</h3>
+<p>${n.summary}</p>
+<div class="analysis"><b>招商价值：</b>${n.value}</div>
+<div class="action"><b>前台行动建议：</b>${n.action}</div>
+</article>`).join(""):
+'<div class="empty">没有符合条件的情报</div>';
+
+document.getElementById("archiveList").innerHTML=
+news.filter(n=>selectedCountry==="全部"||n.country===selectedCountry)
+.map(n=>`<p>${n.date}｜${n.country}｜${n.category}｜${n.title}</p>`).join("");
+}
+
+render();
+</script>
+</body>
+</html>
