@@ -116,8 +116,7 @@ def category_for(text):
     return "技术与市场"
 
 def is_relevant(text):
-    t = text.lower()
-    return any(k in t for k in KEYWORDS)
+    return relevance_level(text) is not None
 
 def fetch(query_group, query):
     # Google News RSS search endpoint. This is indexed public discovery, not a full crawl of Google Search.
