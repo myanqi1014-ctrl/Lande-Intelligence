@@ -53,23 +53,31 @@ PROCESS_TERMS = [
 ]
 
 def relevance_level(text):
-    """Precision-first: only TGV/via-specific stories are admitted."""
+    """Precision-first: require explicit TGV/through-via context, not generic packaging terms."""
     t = text.lower()
-    direct = any(k in t for k in DIRECT_TERMS)
+    exact_via_terms = [
+        "through-glass via", "through glass via", "through-glass vias",
+        "through glass vias", "glass via", "glass vias",
+        "玻璃通孔", "玻璃通孔技术", "玻璃通孔工艺", "玻璃通孔金属化",
+        "玻璃通孔填孔", "玻璃穿孔", "玻璃通孔加工",
+    ]
     glass_core_via = any(k in t for k in GLASS_CORE_TERMS)
     process = any(k in t for k in PROCESS_TERMS)
     has_glass = "glass" in t or "玻璃" in t
-    has_tgv_acronym = re.search(r"\btgv\b", t) is not None or "tgv" in t
+    has_tgv_acronym = re.search(r"\\btgv\\b", t) is not None or "tgv" in t
+    has_via_context = any(k in t for k in ("via", "通孔", "through-hole", "through hole", "穿孔"))
 
-    # TGV acronym alone can be ambiguous; require glass/via/process context.
-    if has_tgv_acronym and (has_glass or process or "via" in t or "通孔" in t):
+    if any(k in t for k in exact_via_terms):
         return "直接相关"
-    if direct or glass_core_via:
+    if has_tgv_acronym and has_glass and has_via_context:
         return "直接相关"
-    # Related process stories require explicit glass and via-processing context.
-    if has_glass and process and ("via" in t or "通孔" in t or "through" in t):
+    if has_tgv_acronym and process and has_via_context:
+        return "直接相关"
+    if glass_core_via and process:
         return "工艺与设备相关"
-    # Generic glass substrate and broad advanced-packaging articles are intentionally excluded.
+    if has_glass and process and has_via_context:
+        return "工艺与设备相关"
+    # Generic glass substrate, semiconductor packaging, company, and market stories are excluded.
     return None
 
 def is_relevant(text):
