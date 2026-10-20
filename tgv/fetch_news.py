@@ -69,7 +69,7 @@ def relevance_level(text):
     has_packaging = any(k in t for k in PACKAGING_TERMS)
     has_process = any(k in t for k in PROCESS_TERMS)
     has_direct = any(k in t for k in DIRECT_TERMS)
-    has_tgv = re.search(r"\\btgv\\b", t) is not None or "tgv" in t
+    has_tgv = re.search(r"\btgv\b", t) is not None or "tgv" in t
 
     # Display-only glass stories are not relevant unless semiconductor packaging is also present.
     display_only = any(k in t for k in DISPLAY_TERMS) and not has_packaging
