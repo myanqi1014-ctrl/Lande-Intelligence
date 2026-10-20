@@ -17,21 +17,33 @@ TRANSLATION_ENDPOINT = "https://translate.googleapis.com/translate_a/single"
 # Open discovery, not a fixed publisher whitelist:
 # Google News RSS is used as a no-key public search index. Site-specific queries are supplementary.
 QUERIES = [
-    ("Google公开检索·TGV核心英文", '("through-glass via" OR "through glass via" OR "glass via" OR "TGV process" OR "TGV technology")'),
-    ("Google公开检索·TGV工艺", '("through-glass via" OR "glass via") (laser drilling OR via formation OR metallization OR copper plating OR via filling)'),
-    ("Google公开检索·TGV产业化", '("through-glass via" OR "glass via" OR "TGV process") (production OR qualification OR equipment OR supplier OR patent)'),
-    ("Google公开检索·玻璃芯基板通孔", '"glass core substrate" ("through via" OR "via formation" OR TGV OR drilling)'),
-    ("Google公开检索·台湾", '(TGV OR "玻璃通孔" OR "玻璃通孔技术" OR "玻璃穿孔") 台湾'),
-    ("Google公开检索·中文技术", '("TGV技术" OR "TGV工艺" OR "玻璃通孔" OR "玻璃通孔金属化" OR "玻璃通孔填孔")'),
-    ("微信公众号·TGV核心", 'site:mp.weixin.qq.com (TGV OR "玻璃通孔" OR "玻璃通孔技术" OR "TGV工艺")'),
-    ("微信公众号·通孔加工", 'site:mp.weixin.qq.com ("玻璃通孔" OR "through-glass via") (激光 OR 钻孔 OR 镀铜 OR 金属化 OR 填孔)'),
-    ("微信公众号·玻璃芯基板通孔", 'site:mp.weixin.qq.com ("玻璃芯基板" OR "glass core substrate") (TGV OR 通孔 OR 钻孔)'),
-    ("TheElec", 'site:thelec.kr (TGV OR "through-glass via" OR "glass via")'),
-    ("Xenospectrum", 'site:xenospectrum.com (TGV OR "through-glass via" OR "glass via")'),
-    ("ETNews", 'site:en.etnews.com (TGV OR "through-glass via" OR "glass via")'),
-    ("BigGo Finance", 'site:finance.biggo.com (TGV OR "through-glass via" OR "glass via")'),
-    ("Seoul Economic Daily", 'site:en.sedaily.com (TGV OR "through-glass via" OR "glass via")'),
-    ("学术与专利", '("through-glass via" OR "glass via" OR "TGV process") (research OR patent OR journal)'),
+    # Exact TGV / through-glass-via terms in multiple languages and query styles.
+    ("Google·TGV核心英文", '("through-glass via" OR "through glass via" OR "glass via" OR "TGV technology" OR "TGV process")'),
+    ("Google·TGV技术研发", '("through-glass via" OR "TGV process") (fabrication OR reliability OR yield OR diameter OR pitch OR aspect ratio)'),
+    ("Google·TGV工艺设备", '("through-glass via" OR "glass via") (laser drilling OR laser modification OR metallization OR copper plating OR filling OR equipment)'),
+    ("Google·TGV产业化", '("through-glass via" OR "TGV technology") (production OR qualification OR customer OR supplier OR shipment OR factory)'),
+    ("Google·TGV专利论文", '("through-glass via" OR "glass via" OR "TGV process") (patent OR paper OR research OR conference)'),
+    ("Google·玻璃芯基板", '"glass core substrate" (TGV OR via OR drilling OR metallization OR fabrication)'),
+    ("Google·玻璃基板与TGV", '("glass substrate" OR "glass core") ("through-glass via" OR "glass via" OR TGV)'),
+    ("Google·Intel玻璃基板", '(Intel OR "glass core substrate") (TGV OR "glass via" OR "through-glass via" OR glass substrate)'),
+    ("Google·CoPoS相关", '(CoPoS OR "panel-level packaging") (TGV OR "glass via" OR "glass core substrate")'),
+    ("Google·企业与供应商", '("through-glass via" OR "glass core substrate" OR "glass via") (company OR supplier OR equipment OR sample OR qualification)'),
+    ("Google·台湾中文", '(TGV OR "玻璃通孔" OR "玻璃穿孔" OR "玻璃芯基板") (制程 OR 钻孔 OR 镀铜 OR 量产 OR 设备) 台湾'),
+    ("Google·繁体中文", '(TGV OR 玻璃通孔 OR 玻璃芯基板 OR 玻璃基板) (通孔 OR 雷射 OR 鍍銅 OR 製程 OR 量產)'),
+    ("Google·简体中文", '(TGV OR 玻璃通孔 OR 玻璃穿孔 OR 玻璃芯基板) (激光 OR 钻孔 OR 金属化 OR 镀铜 OR 填孔 OR 试产 OR 量产)'),
+    ("Google·韩文来源", '(TGV OR "glass via" OR "glass core substrate") semiconductor Korea'),
+    ("Google·日文来源", '(TGV OR "through-glass via" OR "glass core substrate") Japan'),
+    ("微信公众号·TGV核心", 'site:mp.weixin.qq.com (TGV OR "玻璃通孔" OR "玻璃穿孔" OR "TGV工艺")'),
+    ("微信公众号·工艺设备", 'site:mp.weixin.qq.com (TGV OR "玻璃通孔") (激光 OR 钻孔 OR 镀铜 OR 金属化 OR 填孔 OR 设备)'),
+    ("微信公众号·玻璃芯基板", 'site:mp.weixin.qq.com ("玻璃芯基板" OR "glass core substrate") (TGV OR 通孔 OR 钻孔 OR 量产)'),
+    ("微信公众号·企业动态", 'site:mp.weixin.qq.com (TGV OR "玻璃通孔" OR "玻璃芯基板") (企业 OR 公司 OR 设备 OR 产线 OR 试产 OR 量产)'),
+    ("TheElec", 'site:thelec.kr (TGV OR "through-glass via" OR "glass via" OR "glass core substrate")'),
+    ("Xenospectrum", 'site:xenospectrum.com (TGV OR "through-glass via" OR "glass via" OR "glass core substrate")'),
+    ("ETNews", 'site:en.etnews.com (TGV OR "through-glass via" OR "glass via" OR "glass core substrate")'),
+    ("BigGo Finance", 'site:finance.biggo.com (TGV OR "through-glass via" OR "glass via" OR "glass core substrate")'),
+    ("Seoul Economic Daily", 'site:en.sedaily.com (TGV OR "through-glass via" OR "glass via" OR "glass core substrate")'),
+    ("台湾科技媒体", '(TGV OR "玻璃通孔" OR "玻璃芯基板" OR "glass core substrate") 台湾科技 新闻'),
+    ("学术与专利", '("through-glass via" OR "glass via" OR "TGV process") (research OR patent OR journal OR conference)'),
 ]
 DIRECT_TERMS = [
     "through-glass via", "through glass via", "through-glass vias",
@@ -188,7 +200,7 @@ def fetch(query_group, query):
     with urllib.request.urlopen(request, timeout=20) as response:
         root = ET.fromstring(response.read())
     rows = []
-    for item in root.findall(".//item")[:30]:
+    for item in root.findall(".//item")[:50]:
         original_title = clean(item.findtext("title"))
         link = (item.findtext("link") or "").strip()
         if not original_title or not link.startswith(("https://", "http://")):
@@ -295,7 +307,7 @@ def main():
             "updated_at": datetime.now(timezone.utc).isoformat(),
             "source_queries_succeeded": successes,
             "source_queries_total": len(QUERIES),
-            "search_method": "Google News RSS public indexed search; includes broad queries and public WeChat article site queries",
+            "search_method": "Expanded Google News RSS public indexed search: exact TGV terms, technical processes, glass-core substrate TGV, company milestones, Taiwanese/Chinese/Korean/Japanese queries, and public WeChat indexed pages.",
             "news": news
         }, f, ensure_ascii=False, indent=2)
     os.replace(temp, DATA_FILE)
