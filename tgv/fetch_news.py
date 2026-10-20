@@ -31,8 +31,9 @@ QUERIES = [
 ]
 KEYWORDS = [
     "tgv", "through-glass via", "through glass via", "glass substrate",
-    "glass core substrate", "glass interposer", "玻璃通孔", "玻璃基板",
-    "玻璃芯基板", "玻璃中介层", "玻璃基封装", "玻璃穿孔",
+    "glass core substrate", "glass interposer", "glass via", "glass core",
+    "glass-based substrate", "glass packaging", "玻璃通孔", "玻璃基板",
+    "玻璃芯基板", "玻璃中介层", "玻璃基封装", "玻璃穿孔", "玻璃核心基板",
 ]
 
 def clean(value):
@@ -95,8 +96,9 @@ def fetch(query_group, query):
         if summary == original_title or len(summary) < 35:
             summary = ""
         text = original_title + " " + summary
-        # Domain-specific search results may use synonyms, so keep those results even if the title lacks TGV.
-        if not is_relevant(text) and query_group not in {"TheElec", "Xenospectrum", "ETNews", "BigGo Finance", "Seoul Economic Daily", "台湾科技媒体", "中文产业资讯", "学术与专利"}:
+        # Apply relevance filtering to every query, including site-specific searches.
+        # This avoids adding unrelated articles simply because they came from a requested publisher.
+        if not is_relevant(text):
             continue
         rows.append({
             "source_group": query_group,
@@ -130,12 +132,12 @@ def main():
                 if url not in seen:
                     seen.add(url)
                     found.append(row)
-            print(f"{group}: {len(rows)} items")
+            print(f"{group}: {len(rows)} 条相关结果")
         except Exception as exc:
             print(f"采集失败 [{group}]: {str(exc)[:160]}")
 
     if not found:
-        print("本次没有获取到新新闻；保留现有数据。")
+        print("本次没有获取到相关新闻；保留现有数据。")
         return
 
     cache, news = {}, []
@@ -160,12 +162,16 @@ def main():
             "category": category_for(original_title + " " + original_summary),
             "url": row["url"],
             "translation_status": "自动翻译，建议核对原文" if title != original_title else "保留原文或无需翻译",
-            "relevance": "待人工研判",
+            "relevance": "关键词初筛通过，仍需人工核验",
         })
 
+    # Preserve relevant historical records, but discard clearly unrelated results from the initial broad run.
     known = {n.get("url") for n in news}
     for old in previous:
-        if isinstance(old, dict) and old.get("url") and old["url"] not in known:
+        if not isinstance(old, dict) or not old.get("url") or old["url"] in known:
+            continue
+        searchable = " ".join(str(old.get(k, "")) for k in ("title", "original_title", "summary", "original_summary"))
+        if is_relevant(searchable):
             news.append(old)
             known.add(old["url"])
     news.sort(key=lambda n: n.get("date", ""), reverse=True)
@@ -174,7 +180,7 @@ def main():
     with open(temp, "w", encoding="utf-8") as f:
         json.dump({"updated_at": datetime.now(timezone.utc).isoformat(), "source_queries_succeeded": successes, "news": news}, f, ensure_ascii=False, indent=2)
     os.replace(temp, DATA_FILE)
-    print(f"完成：{successes}/{len(QUERIES)} 个检索成功，当前归档 {len(news)} 条。")
+    print(f"完成：{successes}/{len(QUERIES)} 个检索成功，当前归档 {len(news)} 条相关性初筛新闻。")
 
 if __name__ == "__main__":
     main()
