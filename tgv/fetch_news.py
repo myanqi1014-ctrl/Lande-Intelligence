@@ -83,6 +83,61 @@ def relevance_level(text):
 def is_relevant(text):
     return relevance_level(text) is not None
 
+def classify_content(text):
+    """Classify TGV-specific articles by the kind of evidence they contain."""
+    t = text.lower()
+    technical_terms = [
+        "process", "fabrication", "laser drilling", "laser ablation",
+        "metallization", "copper plating", "via filling", "via formation",
+        "aspect ratio", "pitch", "diameter", "yield", "reliability",
+        "warpage", "crack", "roughness", "electrical performance",
+        "工艺", "制程", "激光钻孔", "激光改质", "金属化", "镀铜",
+        "填孔", "孔径", "深宽比", "良率", "可靠性", "翘曲", "裂纹",
+        "技术难点", "性能指标", "实验", "验证结果",
+    ]
+    industrial_terms = [
+        "mass production", "production line", "pilot line", "qualification",
+        "customer validation", "shipment", "capacity", "equipment order",
+        "factory", "plant", "investment", "合作备忘录", "客户验证",
+        "送样", "认证", "量产", "试产", "产线", "扩产", "设备采购",
+        "建厂", "投产", "产能", "订单", "签约", "合作",
+    ]
+    market_terms = [
+        "market size", "cagr", "market forecast", "market outlook",
+        "investment opportunity", "market opportunity", "industry report",
+        "market research", "市场规模", "复合年增长率", "市场预测",
+        "投资机会", "行业报告", "市场展望", "产业爆发",
+    ]
+    technical_hits = [k for k in technical_terms if k in t]
+    industrial_hits = [k for k in industrial_terms if k in t]
+    market_hits = [k for k in market_terms if k in t]
+
+    # Prefer concrete technical evidence, then verifiable industrial milestones.
+    if technical_hits:
+        return {
+            "content_type": "技术进展",
+            "quality_reason": "命中具体工艺、性能、可靠性或技术验证词：" + "、".join(technical_hits[:3]),
+            "quality_score": min(95, 65 + 5 * len(technical_hits)),
+        }
+    if industrial_hits and not (market_hits and len(industrial_hits) == 1):
+        return {
+            "content_type": "产业化进展",
+            "quality_reason": "命中产线、试产、客户验证、设备、订单或量产等进展词：" + "、".join(industrial_hits[:3]),
+            "quality_score": min(90, 60 + 5 * len(industrial_hits)),
+        }
+    if market_hits:
+        return {
+            "content_type": "市场观察",
+            "quality_reason": "以市场规模、预测或投资机会为主，缺少明确技术/量产证据",
+            "quality_score": 35,
+        }
+    return {
+        "content_type": "待核验",
+        "quality_reason": "标题/摘要能确认与 TGV 相关，但暂未识别到明确技术指标或产业化里程碑",
+        "quality_score": 45,
+    }
+
+
 def clean(value):
     value = re.sub(r"<[^>]+>", " ", value or "")
     return re.sub(r"\s+", " ", html.unescape(value)).strip()
@@ -198,6 +253,7 @@ def main():
         summary = old.get("summary") if old.get("original_summary") == original_summary and old.get("summary") else None
         if not summary:
             summary = translate_zh(original_summary, cache) if original_summary else "聚合源未提供可靠摘要，请打开原文核实。"
+        quality = classify_content(original_title + " " + original_summary)
         news.append({
             "title": title,
             "original_title": original_title,
@@ -211,6 +267,9 @@ def main():
             "translation_status": "自动翻译，建议核对原文" if title != original_title else "保留原文或无需翻译",
             "relevance": row["relevance_level"] + "：关键词规则初筛通过，仍需人工核验",
             "relevance_level": row["relevance_level"],
+            "content_type": quality["content_type"],
+            "quality_reason": quality["quality_reason"],
+            "quality_score": quality["quality_score"],
         })
 
     known = {n.get("url") for n in news}
@@ -222,6 +281,10 @@ def main():
         if level:
             old["relevance_level"] = level
             old["relevance"] = level + "：历史记录通过关键词规则初筛，仍需人工核验"
+            quality = classify_content(searchable)
+            old["content_type"] = quality["content_type"]
+            old["quality_reason"] = quality["quality_reason"]
+            old["quality_score"] = quality["quality_score"]
             news.append(old)
             known.add(old["url"])
     news.sort(key=lambda n: n.get("date", ""), reverse=True)
@@ -238,7 +301,9 @@ def main():
     os.replace(temp, DATA_FILE)
     direct_count = sum(1 for n in news if n.get("relevance_level") == "直接相关")
     related_count = sum(1 for n in news if n.get("relevance_level") == "工艺与设备相关")
-    print(f"完成：{successes}/{len(QUERIES)} 个检索成功，归档 {len(news)} 条；直接相关 {direct_count} 条，产业链相关 {related_count} 条。")
+    types = {name: sum(1 for n in news if n.get("content_type") == name) for name in ("技术进展", "产业化进展", "市场观察", "待核验")}
+    print(f"完成：{successes}/{len(QUERIES)} 个检索成功，归档 {len(news)} 条；直接相关 {direct_count} 条，工艺与设备相关 {related_count} 条。")
+    print("内容质量分类：" + "；".join(f"{k} {v} 条" for k, v in types.items()))
     print("说明：微信公众号仅能发现被公开索引的文章；未被索引、需登录或受限制的文章不会保证采集到。")
 
 if __name__ == "__main__":
