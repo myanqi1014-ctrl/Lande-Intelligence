@@ -36,13 +36,60 @@ QUERIES = [
     ("Seoul Economic Daily", 'site:en.sedaily.com (TGV OR "glass substrate" OR semiconductor packaging)'),
     ("学术与专利", '("through-glass via" OR "TGV glass substrate") research OR patent'),
 ]
-KEYWORDS = [
-    "tgv", "through-glass via", "through glass via", "glass substrate",
-    "glass core substrate", "glass interposer", "glass via", "glass core",
-    "glass-based substrate", "glass packaging", "glass carrier", "glass panel",
-    "玻璃通孔", "玻璃基板", "玻璃芯基板", "玻璃中介层", "玻璃基封装",
-    "玻璃穿孔", "玻璃核心基板", "玻璃载板", "玻璃面板级封装",
+DIRECT_TERMS = [
+    "through-glass via", "through glass via", "through glass vias",
+    "glass via", "glass vias", "玻璃通孔", "玻璃通孔技术", "玻璃穿孔",
+    "through-glass-via", "tgv technology", "tgv process", "tgv interposer",
 ]
+GLASS_TERMS = [
+    "glass substrate", "glass core substrate", "glass interposer",
+    "glass-based substrate", "glass core", "玻璃基板", "玻璃芯基板",
+    "玻璃中介层", "玻璃核心基板", "玻璃载板",
+]
+PACKAGING_TERMS = [
+    "semiconductor", "semiconductors", "advanced packaging", "chip packaging",
+    "package substrate", "packaging substrate", "ic substrate", "ic packaging",
+    "chiplet", "interposer", "integrated circuit", "半导体", "先进封装",
+    "芯片封装", "封装基板", "芯片互连", "中介层", "集成电路",
+]
+PROCESS_TERMS = [
+    "laser drilling", "laser-induced", "via metallization", "copper plating",
+    "electroplating", "via formation", "via filling", "microvia",
+    "激光钻孔", "激光加工", "通孔金属化", "镀铜", "电镀", "填孔", "微孔",
+]
+DISPLAY_TERMS = [
+    "oled", "lcd", "display panel", "screen glass", "cover glass",
+    "smartphone display", "电视面板", "显示面板", "盖板玻璃", "显示屏",
+]
+
+def relevance_level(text):
+    """Return '直接相关', '产业链相关', or None. Prefer precision over volume."""
+    t = text.lower()
+    has_glass_context = any(k in t for k in GLASS_TERMS) or "glass" in t or "玻璃" in t
+    has_packaging = any(k in t for k in PACKAGING_TERMS)
+    has_process = any(k in t for k in PROCESS_TERMS)
+    has_direct = any(k in t for k in DIRECT_TERMS)
+    has_tgv = re.search(r"\\btgv\\b", t) is not None or "tgv" in t
+
+    # Display-only glass stories are not relevant unless semiconductor packaging is also present.
+    display_only = any(k in t for k in DISPLAY_TERMS) and not has_packaging
+    if display_only:
+        return None
+
+    # TGV acronym alone can mean unrelated things; require a glass/semiconductor/package context.
+    if has_direct and (has_glass_context or has_packaging or has_process):
+        return "直接相关"
+    if has_tgv and has_glass_context and (has_packaging or has_process):
+        return "直接相关"
+    if any(k in t for k in ("glass core substrate", "glass interposer", "玻璃芯基板", "玻璃中介层")) and has_packaging:
+        return "产业链相关"
+    # Broader glass-substrate items are admitted only when explicitly tied to semiconductor packaging.
+    if any(k in t for k in GLASS_TERMS) and has_packaging:
+        return "产业链相关"
+    # A process story needs glass context plus semiconductor/package context; process words alone are insufficient.
+    if has_glass_context and has_process and has_packaging:
+        return "产业链相关"
+    return None
 
 def clean(value):
     value = re.sub(r"<[^>]+>", " ", value or "")
@@ -105,9 +152,11 @@ def fetch(query_group, query):
         if summary == original_title or len(summary) < 35:
             summary = ""
         text = original_title + " " + summary
-        if not is_relevant(text):
+        level = relevance_level(text)
+        if not level:
             continue
         rows.append({
+            "relevance_level": level,
             "source_group": query_group,
             "original_title": original_title,
             "original_summary": summary,
@@ -169,7 +218,8 @@ def main():
             "category": category_for(original_title + " " + original_summary),
             "url": row["url"],
             "translation_status": "自动翻译，建议核对原文" if title != original_title else "保留原文或无需翻译",
-            "relevance": "关键词初筛通过，仍需人工核验",
+            "relevance": row["relevance_level"] + "：关键词规则初筛通过，仍需人工核验",
+            "relevance_level": row["relevance_level"],
         })
 
     known = {n.get("url") for n in news}
@@ -177,7 +227,10 @@ def main():
         if not isinstance(old, dict) or not old.get("url") or old["url"] in known:
             continue
         searchable = " ".join(str(old.get(k, "")) for k in ("title", "original_title", "summary", "original_summary"))
-        if is_relevant(searchable):
+        level = relevance_level(searchable)
+        if level:
+            old["relevance_level"] = level
+            old["relevance"] = level + "：历史记录通过关键词规则初筛，仍需人工核验"
             news.append(old)
             known.add(old["url"])
     news.sort(key=lambda n: n.get("date", ""), reverse=True)
@@ -192,7 +245,9 @@ def main():
             "news": news
         }, f, ensure_ascii=False, indent=2)
     os.replace(temp, DATA_FILE)
-    print(f"完成：{successes}/{len(QUERIES)} 个检索成功，当前归档 {len(news)} 条相关性初筛新闻。")
+    direct_count = sum(1 for n in news if n.get("relevance_level") == "直接相关")
+    related_count = sum(1 for n in news if n.get("relevance_level") == "产业链相关")
+    print(f"完成：{successes}/{len(QUERIES)} 个检索成功，归档 {len(news)} 条；直接相关 {direct_count} 条，产业链相关 {related_count} 条。")
     print("说明：微信公众号仅能发现被公开索引的文章；未被索引、需登录或受限制的文章不会保证采集到。")
 
 if __name__ == "__main__":
