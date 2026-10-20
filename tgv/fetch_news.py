@@ -17,79 +17,63 @@ TRANSLATION_ENDPOINT = "https://translate.googleapis.com/translate_a/single"
 # Open discovery, not a fixed publisher whitelist:
 # Google News RSS is used as a no-key public search index. Site-specific queries are supplementary.
 QUERIES = [
-    ("Google公开检索·英文核心", '("Through-Glass Via" OR "through glass via" OR TGV) semiconductor'),
-    ("Google公开检索·玻璃基板", '("glass core substrate" OR "glass substrate" OR "glass interposer") semiconductor packaging'),
-    ("Google公开检索·设备工艺", '("TGV" OR "through glass via") (laser drilling OR metallization OR plating OR equipment)'),
-    ("Google公开检索·产业化", '("glass substrate" OR "glass core substrate") (mass production OR qualification OR investment OR production line)'),
-    ("Google公开检索·韩国", '(TGV OR "glass substrate" OR "glass core substrate") semiconductor Korea'),
-    ("Google公开检索·日本", '(TGV OR "glass substrate" OR "through glass via") semiconductor Japan'),
-    ("Google公开检索·台湾", '(TGV OR 玻璃基板 OR 玻璃通孔 OR 玻璃芯基板) 台湾'),
-    ("Google公开检索·中文", '(TGV OR 玻璃基板 OR 玻璃通孔 OR 玻璃芯基板) 半导体 封装'),
-    ("微信公众号公开文章", 'site:mp.weixin.qq.com (TGV OR 玻璃基板 OR 玻璃通孔 OR 玻璃芯基板)'),
-    ("微信公众号·先进封装", 'site:mp.weixin.qq.com ("玻璃基板" OR "玻璃中介层") 先进封装'),
-    ("微信公众号·设备工艺", 'site:mp.weixin.qq.com (TGV OR 玻璃通孔) 激光 镀铜 工艺'),
-    ("微信公众号·企业产业化", 'site:mp.weixin.qq.com ("玻璃基板" OR TGV) 量产 企业'),
-    ("TheElec", 'site:thelec.kr (TGV OR "glass substrate" OR "glass core")'),
-    ("Xenospectrum", 'site:xenospectrum.com (TGV OR "glass substrate" OR semiconductor packaging)'),
-    ("ETNews", 'site:en.etnews.com (TGV OR "glass substrate" OR "glass core substrate")'),
-    ("BigGo Finance", 'site:finance.biggo.com (TGV OR "glass substrate" OR semiconductor packaging)'),
-    ("Seoul Economic Daily", 'site:en.sedaily.com (TGV OR "glass substrate" OR semiconductor packaging)'),
-    ("学术与专利", '("through-glass via" OR "TGV glass substrate") research OR patent'),
+    ("Google公开检索·TGV核心英文", '("through-glass via" OR "through glass via" OR "glass via" OR "TGV process" OR "TGV technology")'),
+    ("Google公开检索·TGV工艺", '("through-glass via" OR "glass via") (laser drilling OR via formation OR metallization OR copper plating OR via filling)'),
+    ("Google公开检索·TGV产业化", '("through-glass via" OR "glass via" OR "TGV process") (production OR qualification OR equipment OR supplier OR patent)'),
+    ("Google公开检索·玻璃芯基板通孔", '"glass core substrate" ("through via" OR "via formation" OR TGV OR drilling)'),
+    ("Google公开检索·台湾", '(TGV OR "玻璃通孔" OR "玻璃通孔技术" OR "玻璃穿孔") 台湾'),
+    ("Google公开检索·中文技术", '("TGV技术" OR "TGV工艺" OR "玻璃通孔" OR "玻璃通孔金属化" OR "玻璃通孔填孔")'),
+    ("微信公众号·TGV核心", 'site:mp.weixin.qq.com (TGV OR "玻璃通孔" OR "玻璃通孔技术" OR "TGV工艺")'),
+    ("微信公众号·通孔加工", 'site:mp.weixin.qq.com ("玻璃通孔" OR "through-glass via") (激光 OR 钻孔 OR 镀铜 OR 金属化 OR 填孔)'),
+    ("微信公众号·玻璃芯基板通孔", 'site:mp.weixin.qq.com ("玻璃芯基板" OR "glass core substrate") (TGV OR 通孔 OR 钻孔)'),
+    ("TheElec", 'site:thelec.kr (TGV OR "through-glass via" OR "glass via")'),
+    ("Xenospectrum", 'site:xenospectrum.com (TGV OR "through-glass via" OR "glass via")'),
+    ("ETNews", 'site:en.etnews.com (TGV OR "through-glass via" OR "glass via")'),
+    ("BigGo Finance", 'site:finance.biggo.com (TGV OR "through-glass via" OR "glass via")'),
+    ("Seoul Economic Daily", 'site:en.sedaily.com (TGV OR "through-glass via" OR "glass via")'),
+    ("学术与专利", '("through-glass via" OR "glass via" OR "TGV process") (research OR patent OR journal)'),
 ]
 DIRECT_TERMS = [
-    "through-glass via", "through glass via", "through glass vias",
-    "glass via", "glass vias", "玻璃通孔", "玻璃通孔技术", "玻璃穿孔",
-    "through-glass-via", "tgv technology", "tgv process", "tgv interposer",
+    "through-glass via", "through glass via", "through-glass vias",
+    "through glass vias", "glass via", "glass vias",
+    "tgv process", "tgv technology", "tgv fabrication", "tgv metallization",
+    "tgv drilling", "tgv interposer", "玻璃通孔", "玻璃通孔技术",
+    "玻璃通孔工艺", "玻璃通孔金属化", "玻璃通孔填孔", "玻璃穿孔",
+    "玻璃通孔加工", "tgv工艺", "tgv技术",
 ]
-GLASS_TERMS = [
-    "glass substrate", "glass core substrate", "glass interposer",
-    "glass-based substrate", "glass core", "玻璃基板", "玻璃芯基板",
-    "玻璃中介层", "玻璃核心基板", "玻璃载板",
-]
-PACKAGING_TERMS = [
-    "semiconductor", "semiconductors", "advanced packaging", "chip packaging",
-    "package substrate", "packaging substrate", "ic substrate", "ic packaging",
-    "chiplet", "interposer", "integrated circuit", "半导体", "先进封装",
-    "芯片封装", "封装基板", "芯片互连", "中介层", "集成电路",
+GLASS_CORE_TERMS = [
+    "glass core substrate via", "glass core substrate vias",
+    "glass core via", "玻璃芯基板通孔", "玻璃芯基板通孔加工",
 ]
 PROCESS_TERMS = [
-    "laser drilling", "laser-induced", "via metallization", "copper plating",
-    "electroplating", "via formation", "via filling", "microvia",
-    "激光钻孔", "激光加工", "通孔金属化", "镀铜", "电镀", "填孔", "微孔",
-]
-DISPLAY_TERMS = [
-    "oled", "lcd", "display panel", "screen glass", "cover glass",
-    "smartphone display", "电视面板", "显示面板", "盖板玻璃", "显示屏",
+    "laser drilling", "laser ablation", "via metallization", "copper plating",
+    "via filling", "via formation", "through via", "microvia",
+    "激光钻孔", "激光改质", "通孔金属化", "镀铜", "电镀填孔",
+    "通孔填充", "通孔形成", "玻璃通孔加工",
 ]
 
 def relevance_level(text):
-    """Return '直接相关', '产业链相关', or None. Prefer precision over volume."""
+    """Precision-first: only TGV/via-specific stories are admitted."""
     t = text.lower()
-    has_glass_context = any(k in t for k in GLASS_TERMS) or "glass" in t or "玻璃" in t
-    has_packaging = any(k in t for k in PACKAGING_TERMS)
-    has_process = any(k in t for k in PROCESS_TERMS)
-    has_direct = any(k in t for k in DIRECT_TERMS)
-    has_tgv = re.search(r"\btgv\b", t) is not None or "tgv" in t
+    direct = any(k in t for k in DIRECT_TERMS)
+    glass_core_via = any(k in t for k in GLASS_CORE_TERMS)
+    process = any(k in t for k in PROCESS_TERMS)
+    has_glass = "glass" in t or "玻璃" in t
+    has_tgv_acronym = re.search(r"\btgv\b", t) is not None or "tgv" in t
 
-    # Display-only glass stories are not relevant unless semiconductor packaging is also present.
-    display_only = any(k in t for k in DISPLAY_TERMS) and not has_packaging
-    if display_only:
-        return None
-
-    # TGV acronym alone can mean unrelated things; require a glass/semiconductor/package context.
-    if has_direct and (has_glass_context or has_packaging or has_process):
+    # TGV acronym alone can be ambiguous; require glass/via/process context.
+    if has_tgv_acronym and (has_glass or process or "via" in t or "通孔" in t):
         return "直接相关"
-    if has_tgv and has_glass_context and (has_packaging or has_process):
+    if direct or glass_core_via:
         return "直接相关"
-    if any(k in t for k in ("glass core substrate", "glass interposer", "玻璃芯基板", "玻璃中介层")) and has_packaging:
-        return "产业链相关"
-    # Broader glass-substrate items are admitted only when explicitly tied to semiconductor packaging.
-    if any(k in t for k in GLASS_TERMS) and has_packaging:
-        return "产业链相关"
-    # A process story needs glass context plus semiconductor/package context; process words alone are insufficient.
-    if has_glass_context and has_process and has_packaging:
-        return "产业链相关"
+    # Related process stories require explicit glass and via-processing context.
+    if has_glass and process and ("via" in t or "通孔" in t or "through" in t):
+        return "工艺与设备相关"
+    # Generic glass substrate and broad advanced-packaging articles are intentionally excluded.
     return None
+
+def is_relevant(text):
+    return relevance_level(text) is not None
 
 def clean(value):
     value = re.sub(r"<[^>]+>", " ", value or "")
@@ -246,7 +230,7 @@ def main():
         }, f, ensure_ascii=False, indent=2)
     os.replace(temp, DATA_FILE)
     direct_count = sum(1 for n in news if n.get("relevance_level") == "直接相关")
-    related_count = sum(1 for n in news if n.get("relevance_level") == "产业链相关")
+    related_count = sum(1 for n in news if n.get("relevance_level") == "工艺与设备相关")
     print(f"完成：{successes}/{len(QUERIES)} 个检索成功，归档 {len(news)} 条；直接相关 {direct_count} 条，产业链相关 {related_count} 条。")
     print("说明：微信公众号仅能发现被公开索引的文章；未被索引、需登录或受限制的文章不会保证采集到。")
 
