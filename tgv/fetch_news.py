@@ -166,6 +166,8 @@ def translate_zh(text, cache):
         with urllib.request.urlopen(request, timeout=12) as response:
             data = json.load(response)
         translated = "".join(part[0] for part in data[0] if part and part[0]).strip()
+        # Force Chinese display text through zh-CN conversion as well, so Traditional Chinese
+        # headlines from Taiwan/HK sources are normalized to Simplified Chinese.
         cache[text] = translated or text
     except Exception as exc:
         print(f"翻译失败，保留原文：{str(exc)[:100]}")
@@ -195,8 +197,11 @@ def is_relevant(text):
     return relevance_level(text) is not None
 
 def fetch(query_group, query):
-    # Google News RSS search endpoint. This is indexed public discovery, not a full crawl of Google Search.
-    url = "https://news.google.com/rss/search?q=" + urllib.parse.quote(query) + "&hl=zh-CN&gl=TW&ceid=TW:zh-Hant"
+    # Use an English Google News index for English/global queries so overseas sources are not suppressed
+    # by the Traditional-Chinese/Taiwan edition. Chinese/WeChat queries retain the Chinese edition.
+    chinese_query = ("微信公众号" in query_group or "中文" in query_group or any("\u4e00" <= ch <= "\u9fff" for ch in query))
+    edition = "&hl=zh-CN&gl=TW&ceid=TW:zh-Hant" if chinese_query else "&hl=en-US&gl=US&ceid=US:en"
+    url = "https://news.google.com/rss/search?q=" + urllib.parse.quote(query) + edition
     request = urllib.request.Request(url, headers=HEADERS)
     with urllib.request.urlopen(request, timeout=20) as response:
         root = ET.fromstring(response.read())
