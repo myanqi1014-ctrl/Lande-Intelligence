@@ -1,9 +1,26 @@
 {
-  "updated_at": "2026-10-20T03:01:40.096246+00:00",
-  "source_queries_succeeded": 15,
-  "source_queries_total": 15,
-  "search_method": "Google News RSS public indexed search; includes broad queries and public WeChat article site queries",
+  "updated_at": "2026-10-21T00:23:06.945275+00:00",
+  "source_queries_succeeded": 26,
+  "source_queries_total": 26,
+  "search_method": "Expanded Google News RSS public indexed search: exact TGV terms, technical processes, glass-core substrate TGV, company milestones, Taiwanese/Chinese/Korean/Japanese queries, and public WeChat indexed pages.",
   "news": [
+    {
+      "title": "科技1分钟：TGV也有沙漏身形——认识玻璃通孔腰身比 - DIGITIMES",
+      "original_title": "科技1分鐘：TGV也有沙漏身形——認識玻璃通孔腰身比 - DIGITIMES",
+      "summary": "科技1分钟：TGV也有沙漏身形——认识玻璃通孔腰身比 DIGITIMES",
+      "original_summary": "科技1分鐘：TGV也有沙漏身形——認識玻璃通孔腰身比 DIGITIMES",
+      "date": "2026-10-20",
+      "source": "DIGITIMES",
+      "source_group": "Google·繁体中文",
+      "category": "技术与市场",
+      "url": "https://news.google.com/rss/articles/CBMimAFBVV95cUxNZDFSMzN0MUNXVE1JRWtxT3R1dGs2UExTZTlDSGNBS1hib3RMUktxRy0wVnA3TGpwVklnLTFyYlR3QnJlNkpuUGRmU3NmTmtzQS1UMzFLaV9ZVkZuQ1pZcmNsbWhXQmFxZUpra0lnLWdqd21MbUJNYzFRSUFHSDhHVW5aajJ6WVZzN2FmUVVkVDlBNDAyUDY5Vg?oc=5",
+      "translation_status": "自动翻译，建议核对原文",
+      "relevance": "直接相关：关键词规则初筛通过，仍需人工核验",
+      "relevance_level": "直接相关",
+      "content_type": "待核验",
+      "quality_reason": "标题/摘要能确认与 TGV 相关，但暂未识别到明确技术指标或产业化里程碑",
+      "quality_score": 45
+    },
     {
       "title": "玻璃通孔TGV是什么？ CoPoS试产进度与供应链，为何 Intel 与 NVIDIA 都在押注 TGV 技术？ - 口袋证券",
       "original_title": "玻璃通孔TGV是什麼？CoPoS試產進度與供應鏈，為何 Intel 與 NVIDIA 都在押注 TGV 技術？ - 口袋證券",
@@ -11,7 +28,7 @@
       "original_summary": "玻璃通孔TGV是什麼？CoPoS試產進度與供應鏈，為何 Intel 與 NVIDIA 都在押注 TGV 技術？ 口袋證券",
       "date": "2026-10-16",
       "source": "口袋證券",
-      "source_group": "Google公开检索·TGV核心英文",
+      "source_group": "Google·TGV核心英文",
       "category": "技术与市场",
       "url": "https://news.google.com/rss/articles/CBMiVkFVX3lxTE1oTzhGNXZ0MzdBaTlLckpwSkxkR2RBaWlJa3prRTVPY183bWhhN1AyaGZpS3ZtMVN3S2dxdjNUaHY2LUM3V1VUQTgtSXdfM0s2ai11YnBB?oc=5",
       "translation_status": "自动翻译，建议核对原文",
@@ -32,11 +49,11 @@
       "category": "技术与市场",
       "url": "https://news.google.com/rss/articles/CBMiekFVX3lxTE8tQnY4cmZVREtWaG1QNFpONUxfcFlySm41dVpvbm1Yc3pwRUE2bWZDb2Joa3ZzVzhlOUUxZXYtVmR6UVFyd2xZQTJYYUs5QUd6M2czNHRPWE0wU29SN1NvQ2hZZHdmaHlqZTFiM0dPQmlnZnU3SExNNTN3?oc=5",
       "translation_status": "自动翻译，建议核对原文",
-      "relevance": "直接相关：关键词规则初筛通过，仍需人工核验",
+      "relevance": "直接相关：历史记录通过关键词规则初筛，仍需人工核验",
       "relevance_level": "直接相关",
-      "content_type": "待核验",
-      "quality_reason": "标题/摘要能确认与 TGV 相关，但暂未识别到明确技术指标或产业化里程碑",
-      "quality_score": 45
+      "content_type": "产业化进展",
+      "quality_reason": "命中产线、试产、客户验证、设备、订单或量产等进展词：量产、产线",
+      "quality_score": 70
     },
     {
       "title": "京东方推出15:1长宽比穿玻璃基板，准备运营商量产投资 - BigGo财经",
@@ -66,11 +83,11 @@
       "category": "技术与市场",
       "url": "https://news.google.com/rss/articles/CBMiWkFVX3lxTE5RUzQxR0ZGaGV1RHJVTzEwNHh4NXd1bEE3Wm9XeEpLMlpWNnk0MFVybzJxMEQtMVNfTlNEbzdjRW53bTd5WjVaR1JDLURaVlBPYzFTalpiRHdxZ9IBX0FVX3lxTFBEUDcxbmtUUWc0V1k2aXJJenBxaXNfRWVZMFVmNm8wb2pJaWNuMld6YnM5MFAyOTNqbDVjdEVReHJPemt5ejI2NktycGFmSVQxeGZ5T1FNVXRHTlBXb1FJ?oc=5",
       "translation_status": "自动翻译，建议核对原文",
-      "relevance": "直接相关：关键词规则初筛通过，仍需人工核验",
+      "relevance": "直接相关：历史记录通过关键词规则初筛，仍需人工核验",
       "relevance_level": "直接相关",
-      "content_type": "待核验",
-      "quality_reason": "标题/摘要能确认与 TGV 相关，但暂未识别到明确技术指标或产业化里程碑",
-      "quality_score": 45
+      "content_type": "技术进展",
+      "quality_reason": "命中具体工艺、性能、可靠性或技术验证词：翘曲",
+      "quality_score": 70
     },
     {
       "title": "2035 年玻璃通孔 (TGV) 基板市场 |复合年增长率为 34.2% - 商业研究洞察",
@@ -88,6 +105,23 @@
       "content_type": "市场观察",
       "quality_reason": "以市场规模、预测或投资机会为主，缺少明确技术/量产证据",
       "quality_score": 35
+    },
+    {
+      "title": "TPK-KY中坜玻璃穿孔试产线9月营运 泰国新厂明年初量产 - 钜亨网",
+      "original_title": "TPK-KY中壢玻璃穿孔試產線9月營運 泰國新廠明年初量產 - 鉅亨網",
+      "summary": "聚合源未提供可靠摘要，请打开原文核实。",
+      "original_summary": "",
+      "date": "2026-08-21",
+      "source": "鉅亨網",
+      "source_group": "Google·台湾中文",
+      "category": "技术与市场",
+      "url": "https://news.google.com/rss/articles/CBMiT0FVX3lxTFBFdkVjQkhfOFQxM2RZUjk1Q3MtSWk1WEI5Wlp4a3dOSnZyTkNoamdLWjhCUm9ZVkNWZC1WcVNkQjBHcG1vRVZMSTd3UjhPNjA?oc=5",
+      "translation_status": "自动翻译，建议核对原文",
+      "relevance": "直接相关：关键词规则初筛通过，仍需人工核验",
+      "relevance_level": "直接相关",
+      "content_type": "待核验",
+      "quality_reason": "标题/摘要能确认与 TGV 相关，但暂未识别到明确技术指标或产业化里程碑",
+      "quality_score": 45
     },
     {
       "title": "国内TGV玻璃基板产业爆发：AI芯片封装需要新的基板解决方案，中国制造商竞相扩大玻璃通孔技术_手机网易网",
@@ -113,7 +147,7 @@
       "original_summary": "",
       "date": "2026-07-26",
       "source": "經濟日報",
-      "source_group": "Google公开检索·中文技术",
+      "source_group": "台湾科技媒体",
       "category": "技术与市场",
       "url": "https://news.google.com/rss/articles/CBMiWkFVX3lxTFBaWnJyak5lc1MzWnFlQUprVE83YXNMWU95YU9TbzlwTEVtM3VJaVRCWWhNYzljNUFSUjdtaDgtZWt0c2VYVi0yYk1UendSQVYtTE9LcU1HblRQUdIBX0FVX3lxTFBXQnJzWVlCRFhiaTFVTk5xVVVzNDFLN0hQOTQwNTU1T09uTVQ3YldqOWtkcl9QUFJUSTlNd1paSWxhQ0NORUdNM3dyVEN4TktJcDlpTU1Eblg2LWJoYU5v?oc=5",
       "translation_status": "自动翻译，建议核对原文",
@@ -134,11 +168,11 @@
       "category": "技术与市场",
       "url": "https://news.google.com/rss/articles/CBMiggNBVV95cUxNdjdwTjdOVTk5MzlEZHV2RW51c1VfVnczSENYOWxVeHllajJSSjlhX0wzMVBwb3NEU29vX3dsQzFSWmRiX185MW9VbF9obGkzcGlmSVhBMkZ6TmQ5LThZTkN3cEc0T1RXN0RFN1Q4THZscFdZenZ5S1doa2Z6YVpLSXZtcURyak1lYzBTNGIwZzJxNGdGWTNLMUNDSWZmeGoxYngyWnV3cUFkRk1MZXctYndZTUpYSk0xZ1lvSndoYmxjbWRhVU1qaDVFdEozcVo3REI2cEJkVzFhZnNIVzZKcDgzT2xhSjVxdWFMRHk4WVZZelYxSDZVM3lueFNLTzh5QmEweldkajdWUGFpN25hMWZjY01qcGNLWHpvTGlaOUh0RzZTTjIwSmMtS0JoRzFnMEx0YkhoZkJqaGJiQzVsVjdwQU1EREFNTDF1QllVUWhJN2g3SHhScGZGMU9lc0JLQlFINEpsbF80c3hzejZZQ3FPQzBsaGx3ZWUzY21IVTlWdw?oc=5",
       "translation_status": "自动翻译，建议核对原文",
-      "relevance": "直接相关：关键词规则初筛通过，仍需人工核验",
+      "relevance": "直接相关：历史记录通过关键词规则初筛，仍需人工核验",
       "relevance_level": "直接相关",
       "content_type": "产业化进展",
-      "quality_reason": "命中产线、试产、客户验证、设备、订单或量产等进展词：合作",
-      "quality_score": 65
+      "quality_reason": "命中产线、试产、客户验证、设备、订单或量产等进展词：合作备忘录、合作",
+      "quality_score": 70
     },
     {
       "title": "TGV（玻璃通孔）玻璃基板产业投资机会分析及市场规模预测 - 钜亨号",
@@ -151,11 +185,11 @@
       "category": "技术与市场",
       "url": "https://news.google.com/rss/articles/CBMiSEFVX3lxTFBha0Y4VUtnYlVvUVFiYmY4TjlUWTdHa1ZHUkxTekFQOWk4Y0x2djNFVFA0aTBSS0tHNk5Kb0Fkb0R1emUya3EzUw?oc=5",
       "translation_status": "自动翻译，建议核对原文",
-      "relevance": "直接相关：关键词规则初筛通过，仍需人工核验",
+      "relevance": "直接相关：历史记录通过关键词规则初筛，仍需人工核验",
       "relevance_level": "直接相关",
-      "content_type": "待核验",
-      "quality_reason": "标题/摘要能确认与 TGV 相关，但暂未识别到明确技术指标或产业化里程碑",
-      "quality_score": 45
+      "content_type": "市场观察",
+      "quality_reason": "以市场规模、预测或投资机会为主，缺少明确技术/量产证据",
+      "quality_score": 35
     },
     {
       "title": "TGV 玻璃通孔工艺全解析：从技术原理到国产化现状 - 钜亨号",
@@ -164,7 +198,7 @@
       "original_summary": "",
       "date": "2026-06-28",
       "source": "鉅亨號",
-      "source_group": "Google公开检索·中文技术",
+      "source_group": "Google·繁体中文",
       "category": "技术与市场",
       "url": "https://news.google.com/rss/articles/CBMiSEFVX3lxTE1UUWlnRUhkU1pRWGx6bmNObGdIWjJrbFJGMFhHYVFNeWFYYm9OLUI2aGlEenR5clRQWk93YUdiSVRaYWg0MkZNTA?oc=5",
       "translation_status": "自动翻译，建议核对原文",
@@ -181,7 +215,7 @@
       "original_summary": "TGV 玻璃穿孔完整拆解：Intel 玻璃基板登場後，看懂硬門檻、2027 量產倒數與台灣供應鏈投資地圖｜產業熱話 永豐金證券",
       "date": "2026-05-20",
       "source": "永豐金證券",
-      "source_group": "Google公开检索·TGV核心英文",
+      "source_group": "Google·TGV核心英文",
       "category": "技术与市场",
       "url": "https://news.google.com/rss/articles/CBMi3gRBVV95cUxNRHJMa194dW56d0ZZOWtMSC1XR2ZoQUxkVjAzNndRaDFxNUNUUWR2cE1yVUlaSnk0SGd5dHRuMDgzd3FVMEtZWWV1b2dQUDYyZ1AxSWhCdndLdzZvTVBTVDFIWmRBZUVLSExNQkdGREF4OWxtenhCenlhYmxPWTlSM2RycnFYMlN6ZWlsR254MUp6cmJGaGJNbzJfSUVjTTgtbnVPT1lETWRCdi1HOWEyV0MtZ1dIOTlXNVBfaFdrb05JMUVNaWZnRVpSMExsNWF5SW5zMWYwd1VyT1NoR0kxSTFMSHdZaWpEOGxoOEpiQlhVQ2RUdGFBN0VyaExNLUQyU2xNOWxXcUFoQTRsTmVLWEtHLWlXbW5hMmkxOW1GQWI1MFhVc2N5OW9obTA0Y2VwY3RINEZ3Tld6VDNTV016Nkhfc2NMaEZ4aEJHUGF3bW91Q25VMl9ONXNqTUZfYmEyQzkteHU2VXJ4cXliQzF1M2owMEJSRXExbUw1NTVrZmNSU0ZPY09rTktmVVdIZFp0YTktU1M4OGZrckRkWlR6aGhGSVRZMVNEZFhUemxONHVkVGxYbkNpLWJxVW9uYkJUVnpwMS1uZXQ0S1BYQ1lQMVRiWmxMSUE1SzBqTTJadzZEcU9jWU5iRXZjSkFfeE1Pb3FvUW1EQ0ZyREhIcGZDR1R0aEZnd1A3Q1Y2TVJjUXlmMF9JRHpkMjRqN3o3aFZUMTAwVmNpNmFhenlzQ3M0XzNWWFo4d29ZNHQxcUhFcHUyTlhaWVRWTjVJcXozZ0J2UmZPTjhNMXA0X2RUU3c?oc=5",
       "translation_status": "自动翻译，建议核对原文",
@@ -249,7 +283,7 @@
       "original_summary": "YES 面板級玻璃通孔 (Through Glass Via) 蝕刻工具投入生產 經商新聞",
       "date": "2024-07-10",
       "source": "經商新聞",
-      "source_group": "Google公开检索·TGV核心英文",
+      "source_group": "Google·TGV核心英文",
       "category": "技术与市场",
       "url": "https://news.google.com/rss/articles/CBMiTEFVX3lxTE5nc0dkeE1acDVxTmUwYlVsQVdkQWZyNHdpeTJvTEhidjFFVGRyUmpyX0RQb3ViZ0ZRZzNDcXktQ3NrbmVLRmRaTTA0aTM?oc=5",
       "translation_status": "自动翻译，建议核对原文",
