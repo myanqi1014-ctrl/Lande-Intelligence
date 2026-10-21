@@ -187,7 +187,7 @@ def translate_zh(text, cache):
     params = urllib.parse.urlencode({"client": "gtx", "sl": "auto", "tl": "zh-CN", "dt": "t", "q": text})
     request = urllib.request.Request(TRANSLATION_ENDPOINT + "?" + params, headers=HEADERS)
     try:
-        with urllib.request.urlopen(request, timeout=12) as response:
+        with urllib.request.urlopen(request, timeout=6) as response:
             data = json.load(response)
         translated = "".join(part[0] for part in data[0] if part and part[0]).strip()
         # Force Chinese display text through zh-CN conversion as well, so Traditional Chinese
@@ -196,7 +196,7 @@ def translate_zh(text, cache):
     except Exception as exc:
         print(f"翻译失败，保留原文：{str(exc)[:100]}")
         cache[text] = text
-    time.sleep(0.15)
+    time.sleep(0.03)
     return cache[text]
 
 def parse_date(value):
@@ -230,7 +230,7 @@ def fetch(query_group, query):
     with urllib.request.urlopen(request, timeout=20) as response:
         root = ET.fromstring(response.read())
     rows = []
-    for item in root.findall(".//item")[:50]:
+    for item in root.findall(".//item")[:30]:
         original_title = clean(item.findtext("title"))
         link = (item.findtext("link") or "").strip()
         if not original_title or not link.startswith(("https://", "http://")):
@@ -281,12 +281,12 @@ def fetch_bing_web(query_group, query):
             "original_title": title, "original_summary": "",
             "date": "", "source": "微信公众号", "source_type": "微信/公开内容", "url": link,
         })
-    return rows[:50]
+    return rows[:30]
 
 def fetch_arxiv(query_group, query):
     """Direct arXiv API ingestion; independent of Google News indexing."""
     params = urllib.parse.urlencode({
-        "search_query": query, "start": 0, "max_results": 50,
+        "search_query": query, "start": 0, "max_results": 30,
         "sortBy": "submittedDate", "sortOrder": "descending"
     })
     request = urllib.request.Request("https://export.arxiv.org/api/query?" + params, headers=HEADERS)
@@ -366,7 +366,17 @@ def main():
         print("本次没有获取到相关新闻；保留现有数据。")
         return
 
-    cache, news = {}, []
+    # Reuse translations from the existing archive even when the same article is rediscovered
+    # through a different aggregator URL. This avoids hundreds of repeated translation requests.
+    cache = {}
+    for item in previous:
+        if not isinstance(item, dict):
+            continue
+        ot, tt = item.get("original_title"), item.get("title")
+        osum, tsum = item.get("original_summary"), item.get("summary")
+        if ot and tt: cache[ot] = tt
+        if osum and tsum and tsum != "聚合源未提供可靠摘要，请打开原文核实。": cache[osum] = tsum
+    news = []
     for row in found:
         old = old_by_url.get(row["url"], {})
         original_title = row["original_title"]
@@ -376,7 +386,7 @@ def main():
             title = translate_zh(original_title, cache)
         summary = old.get("summary") if old.get("original_summary") == original_summary and old.get("summary") else None
         if not summary:
-            summary = translate_zh(original_summary, cache) if original_summary else "聚合源未提供可靠摘要，请打开原文核实。"
+            summary = translate_zh(original_summary[:700], cache) if original_summary else "聚合源未提供可靠摘要，请打开原文核实。"
         quality = classify_content(original_title + " " + original_summary)
         news.append({
             "title": title,
