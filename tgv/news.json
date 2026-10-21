@@ -1,9 +1,26 @@
 {
-  "updated_at": "2026-10-21T00:23:06.945275+00:00",
+  "updated_at": "2026-10-21T09:03:59.160348+00:00",
   "source_queries_succeeded": 26,
   "source_queries_total": 26,
   "search_method": "Expanded Google News RSS public indexed search: exact TGV terms, technical processes, glass-core substrate TGV, company milestones, Taiwanese/Chinese/Korean/Japanese queries, and public WeChat indexed pages.",
   "news": [
+    {
+      "title": "科技1分鐘：TGV也有沙漏身形——認識玻璃通孔腰身比 - DIGITIMES",
+      "original_title": "科技1分鐘：TGV也有沙漏身形——認識玻璃通孔腰身比 - DIGITIMES",
+      "summary": "科技1分鐘：TGV也有沙漏身形——認識玻璃通孔腰身比 DIGITIMES",
+      "original_summary": "科技1分鐘：TGV也有沙漏身形——認識玻璃通孔腰身比 DIGITIMES",
+      "date": "2026-10-20",
+      "source": "DIGITIMES",
+      "source_group": "Google·繁体中文",
+      "category": "技术与市场",
+      "url": "https://news.google.com/rss/articles/CBMijgFBVV95cUxPTnIzSjBnbFBDUjBDeUY2U1VLNFhIYTBqLVA3RU9Bbzd5SDBxTjJfdkhVclhtWVhyTUxibEFMb1BEenVNRWpIcEdQREtLRDBZVTBPUTNlNmUwNFgxc1Q3OFJXcncyMl9rOHFLdFg4N0s3R1ctbXd5UHA3Qjl0bWd0OWpJZV9SakVuRmNreEl3?oc=5",
+      "translation_status": "保留原文或无需翻译",
+      "relevance": "直接相关：关键词规则初筛通过，仍需人工核验",
+      "relevance_level": "直接相关",
+      "content_type": "待核验",
+      "quality_reason": "标题/摘要能确认与 TGV 相关，但暂未识别到明确技术指标或产业化里程碑",
+      "quality_score": 45
+    },
     {
       "title": "科技1分钟：TGV也有沙漏身形——认识玻璃通孔腰身比 - DIGITIMES",
       "original_title": "科技1分鐘：TGV也有沙漏身形——認識玻璃通孔腰身比 - DIGITIMES",
@@ -15,7 +32,7 @@
       "category": "技术与市场",
       "url": "https://news.google.com/rss/articles/CBMimAFBVV95cUxNZDFSMzN0MUNXVE1JRWtxT3R1dGs2UExTZTlDSGNBS1hib3RMUktxRy0wVnA3TGpwVklnLTFyYlR3QnJlNkpuUGRmU3NmTmtzQS1UMzFLaV9ZVkZuQ1pZcmNsbWhXQmFxZUpra0lnLWdqd21MbUJNYzFRSUFHSDhHVW5aajJ6WVZzN2FmUVVkVDlBNDAyUDY5Vg?oc=5",
       "translation_status": "自动翻译，建议核对原文",
-      "relevance": "直接相关：关键词规则初筛通过，仍需人工核验",
+      "relevance": "直接相关：历史记录通过关键词规则初筛，仍需人工核验",
       "relevance_level": "直接相关",
       "content_type": "待核验",
       "quality_reason": "标题/摘要能确认与 TGV 相关，但暂未识别到明确技术指标或产业化里程碑",
@@ -117,11 +134,11 @@
       "category": "技术与市场",
       "url": "https://news.google.com/rss/articles/CBMiT0FVX3lxTFBFdkVjQkhfOFQxM2RZUjk1Q3MtSWk1WEI5Wlp4a3dOSnZyTkNoamdLWjhCUm9ZVkNWZC1WcVNkQjBHcG1vRVZMSTd3UjhPNjA?oc=5",
       "translation_status": "自动翻译，建议核对原文",
-      "relevance": "直接相关：关键词规则初筛通过，仍需人工核验",
+      "relevance": "直接相关：历史记录通过关键词规则初筛，仍需人工核验",
       "relevance_level": "直接相关",
-      "content_type": "待核验",
-      "quality_reason": "标题/摘要能确认与 TGV 相关，但暂未识别到明确技术指标或产业化里程碑",
-      "quality_score": 45
+      "content_type": "产业化进展",
+      "quality_reason": "命中产线、试产、客户验证、设备、订单或量产等进展词：量产、试产、产线",
+      "quality_score": 75
     },
     {
       "title": "国内TGV玻璃基板产业爆发：AI芯片封装需要新的基板解决方案，中国制造商竞相扩大玻璃通孔技术_手机网易网",
@@ -202,11 +219,11 @@
       "category": "技术与市场",
       "url": "https://news.google.com/rss/articles/CBMiSEFVX3lxTE1UUWlnRUhkU1pRWGx6bmNObGdIWjJrbFJGMFhHYVFNeWFYYm9OLUI2aGlEenR5clRQWk93YUdiSVRaYWg0MkZNTA?oc=5",
       "translation_status": "自动翻译，建议核对原文",
-      "relevance": "直接相关：关键词规则初筛通过，仍需人工核验",
+      "relevance": "直接相关：历史记录通过关键词规则初筛，仍需人工核验",
       "relevance_level": "直接相关",
-      "content_type": "待核验",
-      "quality_reason": "标题/摘要能确认与 TGV 相关，但暂未识别到明确技术指标或产业化里程碑",
-      "quality_score": 45
+      "content_type": "技术进展",
+      "quality_reason": "命中具体工艺、性能、可靠性或技术验证词：工艺",
+      "quality_score": 70
     },
     {
       "title": "TGV 玻璃穿孔完整拆解：Intel 玻璃基板登场后，看懂硬门槛、2027 量产倒数与台湾供应链投资地图｜产业热话 - 永丰金证券",
