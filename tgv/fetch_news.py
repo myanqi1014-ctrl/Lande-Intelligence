@@ -41,7 +41,12 @@ QUERIES = [
     ("ETNews", 'site:en.etnews.com (TGV OR "glass substrate" OR CPO OR NPO OR "silicon photonics")'),
     ("BigGo Finance", 'site:finance.biggo.com (TGV OR 玻璃基板 OR CPO OR NPO OR 矽光 OR 光互連)'),
     ("Seoul Economic Daily", 'site:en.sedaily.com (TGV OR "glass substrate" OR CPO OR NPO OR "silicon photonics")'),
-    ("论文·专利", '("through-glass via" OR "glass core substrate" OR CPO OR NPO OR "optical I/O" OR "silicon photonics") (research OR patent OR conference OR paper)'),
+    ("论文·专利", '("through-glass via" OR "glass core substrate" OR CPO OR NPO OR "optical I/O" OR "silicon photonics") (research OR patent OR conference OR paper)'),,
+    ("arXiv·光互联预印本", 'site:arxiv.org (CPO OR "co-packaged optics" OR NPO OR "optical interconnect" OR "optical I/O" OR "silicon photonics")'),
+    ("arXiv·玻璃TGV预印本", 'site:arxiv.org ("through-glass via" OR "glass core substrate" OR "glass interposer")'),
+    ("TechRxiv·预印本", 'site:techrxiv.org (CPO OR NPO OR "optical interconnect" OR "silicon photonics" OR TGV OR "glass substrate")'),
+    ("Optica Open·预印本", 'site:opg.optica.org ("Optica Open" OR preprint) (CPO OR "optical interconnect" OR "silicon photonics" OR "optical engine" OR TGV)'),
+    ("Research Square·预印本", 'site:researchsquare.com (CPO OR "optical interconnect" OR "silicon photonics" OR photonics OR TGV)')
 ]
 TOPIC_TERMS = {
     "TGV/玻璃基板": ["through-glass via","through glass via","glass via","tgv technology","tgv process","玻璃通孔","玻璃芯基板","glass core substrate","glass interposer","玻璃中介层"],
@@ -202,6 +207,7 @@ def fetch(query_group, query):
             "original_summary": summary,
             "date": parse_date(item.findtext("pubDate") or ""),
             "source": source,
+            "source_type": "预印本" if any(k in query_group for k in ("arXiv", "TechRxiv", "Optica Open", "Research Square")) else "产业资讯",
             "url": link,
         })
     return rows
@@ -256,6 +262,7 @@ def main():
             "date": row["date"],
             "source": row["source"],
             "source_group": row["source_group"],
+            "source_type": row.get("source_type", "产业资讯"),
             "category": category_for(original_title + " " + original_summary),
             "url": row["url"],
             "translation_status": "自动翻译，建议核对原文" if title != original_title else "保留原文或无需翻译",
@@ -276,6 +283,8 @@ def main():
         if level:
             old["relevance_level"] = level
             old["topics"] = topic_for(searchable)
+            if not old.get("source_type"):
+                old["source_type"] = "预印本" if any(k in str(old.get("source_group", "")) for k in ("arXiv", "TechRxiv", "Optica Open", "Research Square")) else "产业资讯"
             old["relevance"] = level + "：历史记录通过关键词规则初筛，仍需人工核验"
             quality = classify_content(searchable)
             old["content_type"] = quality["content_type"]
@@ -291,7 +300,7 @@ def main():
             "updated_at": datetime.now(timezone.utc).isoformat(),
             "source_queries_succeeded": successes,
             "source_queries_total": len(QUERIES),
-            "search_method": "AI high-speed optical interconnect monitoring: TGV/glass substrates, CPO/NPO/LPO, silicon photonics, optical engines, optical chips/devices, high-speed transceivers, scale-up/scale-out optical I/O, OCS and MicroLED optical interconnect; Google News public index plus public WeChat-indexed pages.",
+            "search_method": "AI high-speed optical interconnect monitoring: TGV/glass substrates, CPO/NPO/LPO, silicon photonics, optical engines, optical chips/devices, high-speed transceivers, scale-up/scale-out optical I/O, OCS and MicroLED optical interconnect; Google News public index plus public WeChat-indexed pages and preprint discovery from arXiv, TechRxiv, Optica Open and Research Square.",
             "news": news
         }, f, ensure_ascii=False, indent=2)
     os.replace(temp, DATA_FILE)
