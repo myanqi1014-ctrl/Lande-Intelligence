@@ -46,7 +46,21 @@ QUERIES = [
     ("arXiv·玻璃TGV预印本", 'site:arxiv.org ("through-glass via" OR "glass core substrate" OR "glass interposer")'),
     ("TechRxiv·预印本", 'site:techrxiv.org (CPO OR NPO OR "optical interconnect" OR "silicon photonics" OR TGV OR "glass substrate")'),
     ("Optica Open·预印本", 'site:opg.optica.org ("Optica Open" OR preprint) (CPO OR "optical interconnect" OR "silicon photonics" OR "optical engine" OR TGV)'),
-    ("Research Square·预印本", 'site:researchsquare.com (CPO OR "optical interconnect" OR "silicon photonics" OR photonics OR TGV)')
+    ("Research Square·预印本", 'site:researchsquare.com (CPO OR "optical interconnect" OR "silicon photonics" OR photonics OR TGV)'),
+    ("官方·NVIDIA", 'site:nvidia.com (CPO OR "co-packaged optics" OR "silicon photonics" OR "optical networking" OR "optical interconnect")'),
+    ("官方·Broadcom", 'site:broadcom.com (CPO OR "co-packaged optics" OR "silicon photonics" OR "optical engine" OR LPO)'),
+    ("官方·Intel", 'site:intel.com ("glass substrate" OR "glass core substrate" OR "silicon photonics" OR "optical I/O" OR CPO)'),
+    ("官方·TSMC", 'site:tsmc.com (silicon photonics OR CPO OR COUPE OR photonics OR optical)'),
+    ("官方·Marvell", 'site:marvell.com (CPO OR "silicon photonics" OR "optical interconnect" OR "optical DSP" OR 1.6T)'),
+    ("官方·Coherent", 'site:coherent.com (CPO OR "optical engine" OR "silicon photonics" OR 1.6T OR "CW laser")'),
+    ("官方·Lumentum", 'site:lumentum.com (CPO OR "CW laser" OR "optical interconnect" OR 1.6T OR photonics)'),
+    ("官方·Cisco", 'site:cisco.com (CPO OR "silicon photonics" OR "optical interconnect" OR "co-packaged optics")'),
+    ("会议·OFC", 'site:ofcconference.org (CPO OR NPO OR "optical interconnect" OR "silicon photonics" OR "optical I/O" OR TGV)'),
+    ("会议·ECOC", '(site:ecoc2026.org OR site:ecoc.org) (CPO OR NPO OR "optical interconnect" OR "silicon photonics" OR 1.6T)'),
+    ("会议·ECTC", 'site:ectc.net (TGV OR "glass substrate" OR "glass core substrate" OR photonics OR "optical interconnect")'),
+    ("会议·SPIE", 'site:spie.org (CPO OR "optical interconnect" OR "silicon photonics" OR "optical I/O" OR TGV)'),
+    ("机构·Optica", 'site:optica.org (CPO OR NPO OR "optical interconnect" OR "silicon photonics" OR "optical I/O")'),
+    ("机构·IEEE", 'site:ieee.org (CPO OR "co-packaged optics" OR "glass core substrate" OR TGV OR "optical interconnect")')
 ]
 TOPIC_TERMS = {
     "TGV/玻璃基板": ["through-glass via","through glass via","glass via","tgv technology","tgv process","玻璃通孔","玻璃芯基板","glass core substrate","glass interposer","玻璃中介层"],
@@ -207,7 +221,7 @@ def fetch(query_group, query):
             "original_summary": summary,
             "date": parse_date(item.findtext("pubDate") or ""),
             "source": source,
-            "source_type": "预印本" if any(k in query_group for k in ("arXiv", "TechRxiv", "Optica Open", "Research Square")) else "产业资讯",
+            "source_type": ("预印本" if any(k in query_group for k in ("arXiv", "TechRxiv", "Optica Open", "Research Square")) else ("企业官方" if query_group.startswith("官方·") else ("会议/机构" if query_group.startswith(("会议·", "机构·")) else "产业资讯"))),
             "url": link,
         })
     return rows
@@ -300,7 +314,7 @@ def main():
             "updated_at": datetime.now(timezone.utc).isoformat(),
             "source_queries_succeeded": successes,
             "source_queries_total": len(QUERIES),
-            "search_method": "AI high-speed optical interconnect monitoring: TGV/glass substrates, CPO/NPO/LPO, silicon photonics, optical engines, optical chips/devices, high-speed transceivers, scale-up/scale-out optical I/O, OCS and MicroLED optical interconnect; Google News public index plus public WeChat-indexed pages and preprint discovery from arXiv, TechRxiv, Optica Open and Research Square.",
+            "search_method": "AI high-speed optical interconnect monitoring: TGV/glass substrates, CPO/NPO/LPO, silicon photonics, optical engines, optical chips/devices, high-speed transceivers, scale-up/scale-out optical I/O, OCS and MicroLED optical interconnect; Google News public index plus public WeChat-indexed pages, preprints, major conference/institution sources, and official company sources for the AI optical-interconnect ecosystem.",
             "news": news
         }, f, ensure_ascii=False, indent=2)
     os.replace(temp, DATA_FILE)
