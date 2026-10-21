@@ -41,7 +41,7 @@ QUERIES = [
     ("ETNews", 'site:en.etnews.com (TGV OR "glass substrate" OR CPO OR NPO OR "silicon photonics")'),
     ("BigGo Finance", 'site:finance.biggo.com (TGV OR 玻璃基板 OR CPO OR NPO OR 矽光 OR 光互連)'),
     ("Seoul Economic Daily", 'site:en.sedaily.com (TGV OR "glass substrate" OR CPO OR NPO OR "silicon photonics")'),
-    ("论文·专利", '("through-glass via" OR "glass core substrate" OR CPO OR NPO OR "optical I/O" OR "silicon photonics") (research OR patent OR conference OR paper)'),,
+    ("论文·专利", '("through-glass via" OR "glass core substrate" OR CPO OR NPO OR "optical I/O" OR "silicon photonics") (research OR patent OR conference OR paper)'),
     ("arXiv·光互联预印本", 'site:arxiv.org (CPO OR "co-packaged optics" OR NPO OR "optical interconnect" OR "optical I/O" OR "silicon photonics")'),
     ("arXiv·玻璃TGV预印本", 'site:arxiv.org ("through-glass via" OR "glass core substrate" OR "glass interposer")'),
     ("TechRxiv·预印本", 'site:techrxiv.org (CPO OR NPO OR "optical interconnect" OR "silicon photonics" OR TGV OR "glass substrate")'),
