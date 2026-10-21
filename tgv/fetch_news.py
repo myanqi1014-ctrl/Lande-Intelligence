@@ -62,6 +62,30 @@ QUERIES = [
     ("机构·Optica", 'site:optica.org (CPO OR NPO OR "optical interconnect" OR "silicon photonics" OR "optical I/O")'),
     ("机构·IEEE", 'site:ieee.org (CPO OR "co-packaged optics" OR "glass core substrate" OR TGV OR "optical interconnect")')
 ]
+
+# Dedicated public-web discovery for Chinese/WeChat content. Google News alone misses most public-account pages.
+WEB_QUERIES = [
+    ("微信公众号·CPO", 'site:mp.weixin.qq.com CPO 共封装光学'),
+    ("微信公众号·NPO_LPO", 'site:mp.weixin.qq.com NPO LPO 光模块'),
+    ("微信公众号·硅光", 'site:mp.weixin.qq.com 硅光 硅光子 光引擎'),
+    ("微信公众号·光互联", 'site:mp.weixin.qq.com 光互联 光互连 AI 算力'),
+    ("微信公众号·高速光模块", 'site:mp.weixin.qq.com 800G 1.6T 光模块'),
+    ("微信公众号·光芯片", 'site:mp.weixin.qq.com 磷化铟 InP DFB EML CW激光器'),
+    ("微信公众号·TFLN", 'site:mp.weixin.qq.com TFLN 薄膜铌酸锂 调制器'),
+    ("微信公众号·TGV", 'site:mp.weixin.qq.com TGV 玻璃通孔 玻璃基板 玻璃芯基板'),
+    ("微信公众号·OCS", 'site:mp.weixin.qq.com OCS 光交换 全光交换'),
+    ("微信公众号·OpticalIO", 'site:mp.weixin.qq.com Optical I/O 光互联'),
+    ("微信公众号·MicroLED", 'site:mp.weixin.qq.com MicroLED 光互联 光通信'),
+]
+
+ARXIV_QUERIES = [
+    ("arXiv·CPO光互联", 'all:"co-packaged optics" OR all:"optical interconnect" OR all:"optical I/O"'),
+    ("arXiv·硅光光引擎", 'all:"silicon photonics" OR all:"optical engine"'),
+    ("arXiv·高速光模块", 'all:"1.6T" OR all:"800G" OR all:"optical transceiver"'),
+    ("arXiv·玻璃TGV", 'all:"through-glass via" OR all:"glass core substrate" OR all:"glass interposer"'),
+    ("arXiv·光芯片器件", 'all:"thin film lithium niobate" OR all:"CW laser" OR all:"InP laser"'),
+]
+
 TOPIC_TERMS = {
     "TGV/玻璃基板": ["through-glass via","through glass via","glass via","tgv technology","tgv process","玻璃通孔","玻璃芯基板","glass core substrate","glass interposer","玻璃中介层"],
     "CPO/NPO/LPO": ["co-packaged optics","cpo","near-packaged optics","npo","linear pluggable optics","lpo","lro","obo","xpo"],
@@ -231,6 +255,63 @@ def fetch(query_group, query):
         })
     return rows
 
+
+def fetch_bing_web(query_group, query):
+    """Public Bing HTML discovery, mainly to recover indexed WeChat/public-web pages missed by Google News."""
+    url = "https://www.bing.com/search?" + urllib.parse.urlencode({"q": query, "count": 50, "setlang": "zh-Hans"})
+    request = urllib.request.Request(url, headers=HEADERS)
+    with urllib.request.urlopen(request, timeout=20) as response:
+        page = response.read().decode("utf-8", "ignore")
+    rows = []
+    # Bing result blocks: extract outbound href + visible title. Keep only public WeChat pages for these queries.
+    for m in re.finditer(r'<li class="b_algo".*?<h2[^>]*>\s*<a[^>]+href="([^"]+)"[^>]*>(.*?)</a>', page, re.I | re.S):
+        link = html.unescape(m.group(1))
+        title = clean(m.group(2))
+        if "mp.weixin.qq.com" not in link or not title:
+            continue
+        text = title
+        level = relevance_level(text)
+        if not level:
+            # The query itself is tightly scoped; allow titles carrying at least one monitored technical term.
+            level = "产业链相关" if topic_for(query + " " + title) else None
+        if not level:
+            continue
+        rows.append({
+            "relevance_level": level, "source_group": query_group,
+            "original_title": title, "original_summary": "",
+            "date": "", "source": "微信公众号", "source_type": "微信/公开内容", "url": link,
+        })
+    return rows[:50]
+
+def fetch_arxiv(query_group, query):
+    """Direct arXiv API ingestion; independent of Google News indexing."""
+    params = urllib.parse.urlencode({
+        "search_query": query, "start": 0, "max_results": 50,
+        "sortBy": "submittedDate", "sortOrder": "descending"
+    })
+    request = urllib.request.Request("https://export.arxiv.org/api/query?" + params, headers=HEADERS)
+    with urllib.request.urlopen(request, timeout=30) as response:
+        root = ET.fromstring(response.read())
+    ns = {"a": "http://www.w3.org/2005/Atom"}
+    rows = []
+    for entry in root.findall("a:entry", ns):
+        title = clean(entry.findtext("a:title", default="", namespaces=ns))
+        summary = clean(entry.findtext("a:summary", default="", namespaces=ns))
+        link = entry.findtext("a:id", default="", namespaces=ns).strip()
+        published = entry.findtext("a:published", default="", namespaces=ns)
+        if not title or not link:
+            continue
+        text = title + " " + summary
+        level = relevance_level(text)
+        if not level:
+            continue
+        rows.append({
+            "relevance_level": level, "source_group": query_group,
+            "original_title": title, "original_summary": summary,
+            "date": published[:10], "source": "arXiv", "source_type": "预印本", "url": link,
+        })
+    return rows
+
 def load_previous():
     try:
         with open(DATA_FILE, "r", encoding="utf-8") as f:
@@ -256,6 +337,30 @@ def main():
             print(f"{group}: {len(rows)} 条相关结果")
         except Exception as exc:
             print(f"检索失败 [{group}]: {str(exc)[:160]}")
+
+    web_successes = 0
+    for group, query in WEB_QUERIES:
+        try:
+            rows = fetch_bing_web(group, query)
+            web_successes += 1
+            for row in rows:
+                if row["url"] not in seen:
+                    seen.add(row["url"]); found.append(row)
+            print(f"{group} [公开网页]: {len(rows)} 条相关结果")
+        except Exception as exc:
+            print(f"公开网页检索失败 [{group}]: {str(exc)[:160]}")
+
+    arxiv_successes = 0
+    for group, query in ARXIV_QUERIES:
+        try:
+            rows = fetch_arxiv(group, query)
+            arxiv_successes += 1
+            for row in rows:
+                if row["url"] not in seen:
+                    seen.add(row["url"]); found.append(row)
+            print(f"{group} [arXiv直连]: {len(rows)} 条相关结果")
+        except Exception as exc:
+            print(f"arXiv检索失败 [{group}]: {str(exc)[:160]}")
 
     if not found:
         print("本次没有获取到相关新闻；保留现有数据。")
@@ -317,16 +422,16 @@ def main():
     with open(temp, "w", encoding="utf-8") as f:
         json.dump({
             "updated_at": datetime.now(timezone.utc).isoformat(),
-            "source_queries_succeeded": successes,
-            "source_queries_total": len(QUERIES),
-            "search_method": "AI high-speed optical interconnect monitoring: TGV/glass substrates, CPO/NPO/LPO, silicon photonics, optical engines, optical chips/devices, high-speed transceivers, scale-up/scale-out optical I/O, OCS and MicroLED optical interconnect; Google News public index plus public WeChat-indexed pages, preprints, major conference/institution sources, and official company sources for the AI optical-interconnect ecosystem.",
+            "source_queries_succeeded": successes + web_successes + arxiv_successes,
+            "source_queries_total": len(QUERIES) + len(WEB_QUERIES) + len(ARXIV_QUERIES),
+            "search_method": "AI high-speed optical interconnect monitoring: TGV/glass substrates, CPO/NPO/LPO, silicon photonics, optical engines, optical chips/devices, high-speed transceivers, scale-up/scale-out optical I/O, OCS and MicroLED optical interconnect; Multi-channel discovery: English/Chinese Google News, dedicated public-web discovery for indexed WeChat pages, direct arXiv API, plus official company and conference/institution discovery.",
             "news": news
         }, f, ensure_ascii=False, indent=2)
     os.replace(temp, DATA_FILE)
     direct_count = sum(1 for n in news if n.get("relevance_level") == "核心相关")
     related_count = sum(1 for n in news if n.get("relevance_level") == "产业链相关")
     types = {name: sum(1 for n in news if n.get("content_type") == name) for name in ("技术进展", "产业化进展", "市场观察", "待核验")}
-    print(f"完成：{successes}/{len(QUERIES)} 个检索成功，归档 {len(news)} 条；核心相关 {direct_count} 条，产业链相关 {related_count} 条。")
+    print(f"完成：Google News {successes}/{len(QUERIES)}；公开网页 {web_successes}/{len(WEB_QUERIES)}；arXiv {arxiv_successes}/{len(ARXIV_QUERIES)}；归档 {len(news)} 条；核心相关 {direct_count} 条，产业链相关 {related_count} 条。")
     print("内容质量分类：" + "；".join(f"{k} {v} 条" for k, v in types.items()))
     print("说明：微信公众号仅能发现被公开索引的文章；未被索引、需登录或受限制的文章不会保证采集到。")
 
