@@ -17,86 +17,68 @@ TRANSLATION_ENDPOINT = "https://translate.googleapis.com/translate_a/single"
 # Open discovery, not a fixed publisher whitelist:
 # Google News RSS is used as a no-key public search index. Site-specific queries are supplementary.
 QUERIES = [
-    # Exact TGV / through-glass-via terms in multiple languages and query styles.
-    ("Google·TGV核心英文", '("through-glass via" OR "through glass via" OR "glass via" OR "TGV technology" OR "TGV process")'),
-    ("Google·TGV技术研发", '("through-glass via" OR "TGV process") (fabrication OR reliability OR yield OR diameter OR pitch OR aspect ratio)'),
-    ("Google·TGV工艺设备", '("through-glass via" OR "glass via") (laser drilling OR laser modification OR metallization OR copper plating OR filling OR equipment)'),
-    ("Google·TGV产业化", '("through-glass via" OR "TGV technology") (production OR qualification OR customer OR supplier OR shipment OR factory)'),
-    ("Google·TGV专利论文", '("through-glass via" OR "glass via" OR "TGV process") (patent OR paper OR research OR conference)'),
-    ("Google·玻璃芯基板", '"glass core substrate" (TGV OR via OR drilling OR metallization OR fabrication)'),
-    ("Google·玻璃基板与TGV", '("glass substrate" OR "glass core") ("through-glass via" OR "glass via" OR TGV)'),
-    ("Google·Intel玻璃基板", '(Intel OR "glass core substrate") (TGV OR "glass via" OR "through-glass via" OR glass substrate)'),
-    ("Google·CoPoS相关", '(CoPoS OR "panel-level packaging") (TGV OR "glass via" OR "glass core substrate")'),
-    ("Google·企业与供应商", '("through-glass via" OR "glass core substrate" OR "glass via") (company OR supplier OR equipment OR sample OR qualification)'),
-    ("Google·台湾中文", '(TGV OR "玻璃通孔" OR "玻璃穿孔" OR "玻璃芯基板") (制程 OR 钻孔 OR 镀铜 OR 量产 OR 设备) 台湾'),
-    ("Google·繁体中文", '(TGV OR 玻璃通孔 OR 玻璃芯基板 OR 玻璃基板) (通孔 OR 雷射 OR 鍍銅 OR 製程 OR 量產)'),
-    ("Google·简体中文", '(TGV OR 玻璃通孔 OR 玻璃穿孔 OR 玻璃芯基板) (激光 OR 钻孔 OR 金属化 OR 镀铜 OR 填孔 OR 试产 OR 量产)'),
-    ("Google·韩文来源", '(TGV OR "glass via" OR "glass core substrate") semiconductor Korea'),
-    ("Google·日文来源", '(TGV OR "through-glass via" OR "glass core substrate") Japan'),
-    ("微信公众号·TGV核心", 'site:mp.weixin.qq.com (TGV OR "玻璃通孔" OR "玻璃穿孔" OR "TGV工艺")'),
-    ("微信公众号·工艺设备", 'site:mp.weixin.qq.com (TGV OR "玻璃通孔") (激光 OR 钻孔 OR 镀铜 OR 金属化 OR 填孔 OR 设备)'),
-    ("微信公众号·玻璃芯基板", 'site:mp.weixin.qq.com ("玻璃芯基板" OR "glass core substrate") (TGV OR 通孔 OR 钻孔 OR 量产)'),
-    ("微信公众号·企业动态", 'site:mp.weixin.qq.com (TGV OR "玻璃通孔" OR "玻璃芯基板") (企业 OR 公司 OR 设备 OR 产线 OR 试产 OR 量产)'),
-    ("TheElec", 'site:thelec.kr (TGV OR "through-glass via" OR "glass via" OR "glass core substrate")'),
-    ("Xenospectrum", 'site:xenospectrum.com (TGV OR "through-glass via" OR "glass via" OR "glass core substrate")'),
-    ("ETNews", 'site:en.etnews.com (TGV OR "through-glass via" OR "glass via" OR "glass core substrate")'),
-    ("BigGo Finance", 'site:finance.biggo.com (TGV OR "through-glass via" OR "glass via" OR "glass core substrate")'),
-    ("Seoul Economic Daily", 'site:en.sedaily.com (TGV OR "through-glass via" OR "glass via" OR "glass core substrate")'),
-    ("台湾科技媒体", '(TGV OR "玻璃通孔" OR "玻璃芯基板" OR "glass core substrate") 台湾科技 新闻'),
-    ("学术与专利", '("through-glass via" OR "glass via" OR "TGV process") (research OR patent OR journal OR conference)'),
+    ("TGV·英文", '("through-glass via" OR "glass core substrate" OR "glass interposer" OR "TGV technology")'),
+    ("TGV·中文", '(TGV OR 玻璃通孔 OR 玻璃芯基板 OR 玻璃中介层)'),
+    ("玻璃基板·产业", '("glass substrate" OR "glass core substrate" OR 玻璃基板 OR 玻璃芯基板) (Intel OR AMD OR NVIDIA OR packaging OR 封装 OR substrate OR interposer)'),
+    ("CPO·核心", '("co-packaged optics" OR CPO) (AI OR datacenter OR optical OR silicon photonics)'),
+    ("NPO·LPO", '("near-packaged optics" OR NPO OR "linear pluggable optics" OR LPO OR LRO) (AI OR optical OR datacenter)'),
+    ("光互联·AI", '("optical interconnect" OR "optical I/O" OR "optical IO") (AI OR GPU OR accelerator OR scale-up OR scale-out)'),
+    ("硅光·光引擎", '("silicon photonics" OR SiPh OR "optical engine" OR PIC) (CPO OR NPO OR AI OR datacenter)'),
+    ("光芯片·激光器", '(InP OR "CW laser" OR DFB OR EML OR VCSEL OR modulator OR TFLN) (CPO OR NPO OR optical interconnect OR AI)'),
+    ("高速光模块", '("800G" OR "1.6T" OR "3.2T" OR "400G/lane" OR "200G/lane") (optical module OR transceiver OR 光模块 OR 光互联)'),
+    ("Scale-up·Scale-out", '("scale-up" OR "scale-out") ("optical interconnect" OR CPO OR NPO OR "optical I/O")'),
+    ("OCS·光交换", '("optical circuit switch" OR OCS OR "all-optical switching") (AI OR datacenter OR scale-up OR scale-out)'),
+    ("玻璃×CPO", '("glass substrate" OR "glass interposer" OR "glass waveguide" OR TGV) ("co-packaged optics" OR CPO)'),
+    ("MicroLED光互联", '("Micro-LED" OR microLED) ("optical interconnect" OR optical communication OR CPO)'),
+    ("微信公众号·TGV玻璃", 'site:mp.weixin.qq.com (TGV OR 玻璃通孔 OR 玻璃基板 OR 玻璃芯基板)'),
+    ("微信公众号·CPO光互联", 'site:mp.weixin.qq.com (CPO OR NPO OR LPO OR 光互联 OR 硅光 OR 光引擎) (AI OR 算力 OR 数据中心 OR 光模块)'),
+    ("微信公众号·光芯片", 'site:mp.weixin.qq.com (InP OR CW激光器 OR DFB OR EML OR TFLN OR 硅光) (CPO OR 光互联 OR 光模块)'),
+    ("台湾科技媒体", '(TGV OR 玻璃基板 OR CPO OR NPO OR LPO OR 矽光 OR 光互連) 台灣 科技'),
+    ("韩国科技媒体", '(TGV OR "glass substrate" OR CPO OR NPO OR "silicon photonics") Korea semiconductor'),
+    ("日本科技媒体", '(TGV OR "glass substrate" OR CPO OR NPO OR "silicon photonics") Japan semiconductor'),
+    ("TheElec", 'site:thelec.kr (TGV OR "glass substrate" OR CPO OR NPO OR "silicon photonics")'),
+    ("Xenospectrum", 'site:xenospectrum.com (TGV OR "glass substrate" OR CPO OR NPO OR "optical interconnect")'),
+    ("ETNews", 'site:en.etnews.com (TGV OR "glass substrate" OR CPO OR NPO OR "silicon photonics")'),
+    ("BigGo Finance", 'site:finance.biggo.com (TGV OR 玻璃基板 OR CPO OR NPO OR 矽光 OR 光互連)'),
+    ("Seoul Economic Daily", 'site:en.sedaily.com (TGV OR "glass substrate" OR CPO OR NPO OR "silicon photonics")'),
+    ("论文·专利", '("through-glass via" OR "glass core substrate" OR CPO OR NPO OR "optical I/O" OR "silicon photonics") (research OR patent OR conference OR paper)'),
 ]
-DIRECT_TERMS = [
-    "through-glass via", "through glass via", "through-glass vias",
-    "through glass vias", "glass via", "glass vias",
-    "tgv process", "tgv technology", "tgv fabrication", "tgv metallization",
-    "tgv drilling", "tgv interposer", "玻璃通孔", "玻璃通孔技术",
-    "玻璃通孔工艺", "玻璃通孔金属化", "玻璃通孔填孔", "玻璃穿孔",
-    "玻璃通孔加工", "tgv工艺", "tgv技术",
-]
-GLASS_CORE_TERMS = [
-    "glass core substrate via", "glass core substrate vias",
-    "glass core via", "玻璃芯基板通孔", "玻璃芯基板通孔加工",
-]
-PROCESS_TERMS = [
-    "laser drilling", "laser ablation", "via metallization", "copper plating",
-    "via filling", "via formation", "through via", "microvia",
-    "激光钻孔", "激光改质", "通孔金属化", "镀铜", "电镀填孔",
-    "通孔填充", "通孔形成", "玻璃通孔加工",
-]
+TOPIC_TERMS = {
+    "TGV/玻璃基板": ["through-glass via","through glass via","glass via","tgv technology","tgv process","玻璃通孔","玻璃芯基板","glass core substrate","glass interposer","玻璃中介层"],
+    "CPO/NPO/LPO": ["co-packaged optics","cpo","near-packaged optics","npo","linear pluggable optics","lpo","lro","obo","xpo"],
+    "AI光互联": ["optical interconnect","optical i/o","optical io","光互联","光互連","scale-up","scale-out","gpu interconnect"],
+    "硅光/光引擎": ["silicon photonics","silicon photonic","siph","optical engine","photonic integrated circuit","pic","硅光","矽光","光引擎"],
+    "光芯片/器件": ["inp","cw laser","dfb","eml","vcsel","tfln","thin-film lithium niobate","modulator","光芯片","激光器","調制器","调制器"],
+    "高速光模块": ["800g","1.6t","3.2t","400g/lane","200g/lane","optical transceiver","optical module","光模块"],
+    "OCS/光交换": ["optical circuit switch","all-optical switching","ocs","光交换","全光交换"],
+    "MicroLED光互联": ["micro-led","microled"],
+}
+CONTEXT_TERMS = ["ai","artificial intelligence","datacenter","data center","gpu","accelerator","switch","ethernet","scale-up","scale-out","optical","photon","光","算力","数据中心","交換機","交换机","半导体","semiconductor","packaging","封装"]
+
+def topic_for(text):
+    t = text.lower()
+    hits = []
+    for topic, terms in TOPIC_TERMS.items():
+        if any(term in t for term in terms):
+            hits.append(topic)
+    # Avoid generic acronym collisions: weak device terms require optical/AI context.
+    if hits and ("光芯片/器件" not in hits or any(k in t for k in CONTEXT_TERMS)):
+        return hits
+    return []
 
 def relevance_level(text):
-    """Precision-first: require explicit TGV/through-via context, not generic packaging terms."""
+    topics = topic_for(text)
+    if not topics:
+        return None
     t = text.lower()
-    exact_via_terms = [
-        "through-glass via", "through glass via", "through-glass vias",
-        "through glass vias", "glass via", "glass vias",
-        "玻璃通孔", "玻璃通孔技术", "玻璃通孔工艺", "玻璃通孔金属化",
-        "玻璃通孔填孔", "玻璃穿孔", "玻璃通孔加工",
-    ]
-    glass_core_via = any(k in t for k in GLASS_CORE_TERMS)
-    process = any(k in t for k in PROCESS_TERMS)
-    has_glass = "glass" in t or "玻璃" in t
-    has_tgv_acronym = re.search(r"\\btgv\\b", t) is not None or "tgv" in t
-    has_via_context = any(k in t for k in ("via", "通孔", "through-hole", "through hole", "穿孔"))
-
-    if any(k in t for k in exact_via_terms):
-        return "直接相关"
-    if has_tgv_acronym and has_glass and has_via_context:
-        return "直接相关"
-    if has_tgv_acronym and process and has_via_context:
-        return "直接相关"
-    if glass_core_via and process:
-        return "工艺与设备相关"
-    if has_glass and process and has_via_context:
-        return "工艺与设备相关"
-    # Generic glass substrate, semiconductor packaging, company, and market stories are excluded.
-    return None
+    strong = any(k in t for k in ["through-glass via","glass core substrate","co-packaged optics","near-packaged optics","optical interconnect","optical i/o","silicon photonics","玻璃通孔","玻璃芯基板","光互联","硅光"])
+    return "核心相关" if strong else "产业链相关"
 
 def is_relevant(text):
     return relevance_level(text) is not None
 
 def classify_content(text):
-    """Classify TGV-specific articles by the kind of evidence they contain."""
+    """Classify AI high-speed optical-interconnect articles by evidence type."""
     t = text.lower()
     technical_terms = [
         "process", "fabrication", "laser drilling", "laser ablation",
@@ -145,7 +127,7 @@ def classify_content(text):
         }
     return {
         "content_type": "待核验",
-        "quality_reason": "标题/摘要能确认与 TGV 相关，但暂未识别到明确技术指标或产业化里程碑",
+        "quality_reason": "标题/摘要与监测主题相关，但暂未识别到明确技术指标或产业化里程碑",
         "quality_score": 45,
     }
 
@@ -279,6 +261,7 @@ def main():
             "translation_status": "自动翻译，建议核对原文" if title != original_title else "保留原文或无需翻译",
             "relevance": row["relevance_level"] + "：关键词规则初筛通过，仍需人工核验",
             "relevance_level": row["relevance_level"],
+            "topics": topic_for(original_title + " " + original_summary),
             "content_type": quality["content_type"],
             "quality_reason": quality["quality_reason"],
             "quality_score": quality["quality_score"],
@@ -292,6 +275,7 @@ def main():
         level = relevance_level(searchable)
         if level:
             old["relevance_level"] = level
+            old["topics"] = topic_for(searchable)
             old["relevance"] = level + "：历史记录通过关键词规则初筛，仍需人工核验"
             quality = classify_content(searchable)
             old["content_type"] = quality["content_type"]
@@ -307,14 +291,14 @@ def main():
             "updated_at": datetime.now(timezone.utc).isoformat(),
             "source_queries_succeeded": successes,
             "source_queries_total": len(QUERIES),
-            "search_method": "Expanded Google News RSS public indexed search: exact TGV terms, technical processes, glass-core substrate TGV, company milestones, Taiwanese/Chinese/Korean/Japanese queries, and public WeChat indexed pages.",
+            "search_method": "AI high-speed optical interconnect monitoring: TGV/glass substrates, CPO/NPO/LPO, silicon photonics, optical engines, optical chips/devices, high-speed transceivers, scale-up/scale-out optical I/O, OCS and MicroLED optical interconnect; Google News public index plus public WeChat-indexed pages.",
             "news": news
         }, f, ensure_ascii=False, indent=2)
     os.replace(temp, DATA_FILE)
-    direct_count = sum(1 for n in news if n.get("relevance_level") == "直接相关")
-    related_count = sum(1 for n in news if n.get("relevance_level") == "工艺与设备相关")
+    direct_count = sum(1 for n in news if n.get("relevance_level") == "核心相关")
+    related_count = sum(1 for n in news if n.get("relevance_level") == "产业链相关")
     types = {name: sum(1 for n in news if n.get("content_type") == name) for name in ("技术进展", "产业化进展", "市场观察", "待核验")}
-    print(f"完成：{successes}/{len(QUERIES)} 个检索成功，归档 {len(news)} 条；直接相关 {direct_count} 条，工艺与设备相关 {related_count} 条。")
+    print(f"完成：{successes}/{len(QUERIES)} 个检索成功，归档 {len(news)} 条；核心相关 {direct_count} 条，产业链相关 {related_count} 条。")
     print("内容质量分类：" + "；".join(f"{k} {v} 条" for k, v in types.items()))
     print("说明：微信公众号仅能发现被公开索引的文章；未被索引、需登录或受限制的文章不会保证采集到。")
 
