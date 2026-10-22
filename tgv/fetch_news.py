@@ -224,6 +224,61 @@ def topic_for(text):
 def is_relevant(text):
     return bool(topic_for(text))
 
+A_TIER_SOURCES = [
+    "DigiTimes","EE Times","Semiconductor Engineering","TechInsights","Yole",
+    "TrendForce","LightCounting","Omdia","NVIDIA","Broadcom","Intel","AMD","Marvell",
+    "Cisco","Coherent","Lumentum","TSMC","GlobalFoundries","Tower Semiconductor",
+    "Ayar Labs","Lightmatter","Celestial AI","Ranovus","OFC","OIF","IEEE","Optica","SPIE","imec"
+]
+B_TIER_SOURCES = [
+    "The Elec","ETNews","Lightwave","Fibre Systems","Photonics Spectra",
+    "Data Center Dynamics","ServeTheHome","SemiAnalysis","SemiWiki","Tom's Hardware",
+    "TechPowerUp","AnandTech","3DInCites","IMAPS","ECTC","C114","爱集微",
+    "电子工程专辑","OFweek","通信世界","通信产业网","电子发烧友","与非网","21ic","EEWorld"
+]
+
+def source_tier(source, group=""):
+    s=(source+" "+group).lower()
+    if any(x.lower() in s for x in A_TIER_SOURCES):
+        return "A"
+    if any(x.lower() in s for x in B_TIER_SOURCES):
+        return "B"
+    return "C"
+
+def intelligence_value(text, source_grade):
+    t=(text or "").lower()
+    strong_terms=[
+        "mass production","volume production","qualification","customer validation","shipment",
+        "design win","order","capacity","pilot line","production line","partnership","launch",
+        "量产","客户验证","送样","订单","扩产","产线","投产","签约","发布","首发","突破"
+    ]
+    technical_terms=[
+        "1.6t","3.2t","200g/lane","400g/lane","cpo","co-packaged optics","optical i/o",
+        "silicon photonics","glass core substrate","through-glass via","tfln",
+        "1.6T","3.2T","CPO","硅光","玻璃芯基板","玻璃通孔","薄膜铌酸锂"
+    ]
+    strong=sum(1 for k in strong_terms if k in t)
+    tech=sum(1 for k in technical_terms if k.lower() in t)
+    score=(30 if source_grade=="A" else 18 if source_grade=="B" else 8) + strong*12 + min(tech,3)*8
+    if score >= 65:
+        return "重点情报", min(score,100)
+    if score >= 42:
+        return "值得关注", min(score,100)
+    return "一般资讯", min(score,100)
+
+def insight_fields(title, summary, category, value_level):
+    text=(title or "").strip()
+    summary=(summary or "").strip()
+    event=text if text else "暂无明确事件标题"
+    key=summary[:180] if summary else ("该条属于"+category+"，需打开原文确认核心事实与参数。")
+    if value_level=="重点情报":
+        impact="可能影响技术路线、供应链格局、客户验证或量产节奏，建议优先核验原文。"
+    elif value_level=="值得关注":
+        impact="对相关技术方向和产业进展具有参考价值，建议结合后续进展持续跟踪。"
+    else:
+        impact="作为行业背景信息参考，当前未识别到明确量产、订单或客户验证信号。"
+    return event, key, impact
+
 def classify(text):
     t=(text or "").lower()
     if any(k in t for k in ["process","fabrication","laser drilling","etching","metallization","plating","modulator","architecture","工艺","激光","蚀刻","金属化","电镀","架构","调制"]):
@@ -358,6 +413,10 @@ def main():
     for r in dedup:
         raw_title=r["original_title"]
         title=translate_zh(raw_title) if id(r) in translate_ids else raw_title
+        category=classify(raw_title+" "+r["original_summary"])
+        grade=source_tier(r["source"], r["source_group"])
+        value_level,value_score=intelligence_value(raw_title+" "+r["original_summary"], grade)
+        event,key_point,impact=insight_fields(title, r["original_summary"], category, value_level)
         news.append({
             "title":title,
             "original_title":raw_title,
@@ -367,7 +426,13 @@ def main():
             "source":r["source"],
             "source_group":r["source_group"],
             "source_type":r["source_type"],
-            "category":classify(raw_title+" "+r["original_summary"]),
+            "source_grade":grade,
+            "value_level":value_level,
+            "value_score":value_score,
+            "event":event,
+            "key_point":key_point,
+            "impact":impact,
+            "category":category,
             "url":r["url"],
             "translation_status":"已翻译标题" if title != raw_title else "原文",
             "topics":r["topics"],
@@ -384,6 +449,12 @@ def main():
         if not topics:
             continue
         old["topics"]=topics
+        old["source_grade"]=old.get("source_grade") or source_tier(str(old.get("source","")), str(old.get("source_group","")))
+        if not old.get("value_level"):
+            vl,vs=intelligence_value(text, old["source_grade"])
+            old["value_level"]=vl; old["value_score"]=vs
+            ev,kp,im=insight_fields(str(old.get("title") or old.get("original_title") or ""), str(old.get("summary") or old.get("original_summary") or ""), str(old.get("category") or "行业资讯"), vl)
+            old["event"]=ev; old["key_point"]=kp; old["impact"]=im
         if old.get("source_type") not in ("国内网站","国外网站"):
             # 基于是否主要为中文来归入国内/国外，历史记录只作补充。
             cjk=len(re.findall(r"[\u4e00-\u9fff]",text))
@@ -401,7 +472,7 @@ def main():
         except Exception:
             pass
 
-    kept.sort(key=lambda x:x.get("date",""),reverse=True)
+    kept.sort(key=lambda x:(x.get("value_score",0),x.get("date","")),reverse=True)
     kept=kept[:4000]
     tmp=DATA_FILE+".tmp"
     with open(tmp,"w",encoding="utf-8") as f:
