@@ -11,71 +11,127 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 DATA_FILE = os.path.join(ROOT, "news.json")
-HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; TGVIntelligence/2.0)"}
+HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; TGVTechIntel/3.0)"}
 TRANSLATION_ENDPOINT = "https://translate.googleapis.com/translate_a/single"
 
-# 仅保留 TGV / 玻璃通孔 / 玻璃芯基板相关检索。
+# 监测范围：TGV + AI 高速光互联全链路。全部通过公开网站/Google News RSS发现，
+# 不依赖微信公众号，不直接硬爬高反爬站点。
 DOMESTIC_QUERIES = [
-    # 泛检索：用于发现新来源
-    ("国内·TGV", '(TGV OR 玻璃通孔 OR 玻璃互连孔 OR 玻璃芯基板 OR 玻璃中介层) 半导体 封装'),
-    ("国内·玻璃基板", '("玻璃芯基板" OR "玻璃基板" OR "玻璃中介层") 半导体 先进封装'),
-    ("国内·TGV工艺", '(TGV OR 玻璃通孔) (激光 OR 蚀刻 OR 金属化 OR 填孔 OR 电镀 OR 工艺)'),
-    ("国内·TGV产业", '(TGV OR 玻璃芯基板) (量产 OR 产线 OR 设备 OR 客户 OR 投资 OR 封装)'),
-    ("国内·TGV设备", '(TGV OR 玻璃通孔 OR 玻璃芯基板) (设备 OR 激光钻孔 OR 检测 OR 电镀 OR CMP OR AOI)'),
-    ("国内·TGV企业", '(TGV OR 玻璃芯基板 OR 玻璃通孔) (京东方 OR 凯盛科技 OR 蓝思科技 OR 沃格光电 OR 帝尔激光 OR 大族激光 OR 通富微电 OR 长电科技)'),
+    # 泛主题发现
+    ("国内·TGV", '(TGV OR 玻璃通孔 OR 玻璃芯基板 OR 玻璃中介层) 半导体 封装'),
+    ("国内·玻璃基板", '("玻璃基板" OR "玻璃芯基板" OR "玻璃中介层") (半导体 OR 先进封装)'),
+    ("国内·CPO", '(CPO OR 共封装光学 OR 共封装光器件) (AI OR 算力 OR 数据中心 OR 光通信)'),
+    ("国内·NPO_LPO", '(NPO OR LPO OR LRO OR 近封装光学 OR 线性可插拔) 光通信'),
+    ("国内·AI光互联", '("AI光互联" OR "光互联" OR "光互连" OR Optical I/O) (算力 OR GPU OR 数据中心)'),
+    ("国内·硅光", '(硅光 OR 硅光子 OR Silicon Photonics) (AI OR 光通信 OR 数据中心 OR CPO)'),
+    ("国内·光引擎", '("光引擎" OR Optical Engine) (CPO OR 硅光 OR AI OR 光模块)'),
+    ("国内·高速光模块", '(800G OR 1.6T OR 3.2T OR 200G/lane OR 400G/lane) (光模块 OR 光通信)'),
+    ("国内·光芯片", '(InP OR 磷化铟 OR DFB OR EML OR CW激光器 OR VCSEL OR TFLN OR 薄膜铌酸锂) 光通信'),
+    ("国内·OCS", '(OCS OR 光路交换 OR 光电路交换 OR 全光交换) (AI OR 数据中心 OR 算力)'),
+    ("国内·MicroLED光互联", '(MicroLED OR Micro-LED) (光互联 OR 光通信 OR 光互连)'),
+    ("国内·ScaleUp", '(Scale-up OR Scale-out OR GPU互联) (光互联 OR CPO OR Optical I/O)'),
 
-    # 重点国内公开网站：多数可被 Google News/公开搜索稳定索引
-    ("国内·未来半导体", 'site:fsemi.tech (TGV OR 玻璃通孔 OR 玻璃芯基板 OR 玻璃基板)'),
-    ("国内·电子与封装", 'site:ep.org.cn (TGV OR 玻璃通孔 OR 玻璃芯基板 OR 玻璃基板)'),
-    ("国内·证券时报", 'site:stcn.com (TGV OR 玻璃通孔 OR 玻璃芯基板 OR 玻璃基板)'),
-    ("国内·中国证券网", 'site:cnstock.com (TGV OR 玻璃通孔 OR 玻璃芯基板 OR 玻璃基板)'),
-    ("国内·微纳制造", 'site:nanoplatform.cn (TGV OR 玻璃通孔 OR 玻璃芯基板 OR 玻璃基板)'),
-    ("国内·爱集微", 'site:ijiwei.com (TGV OR 玻璃通孔 OR 玻璃芯基板 OR 玻璃基板)'),
-    ("国内·电子工程专辑", 'site:eet-china.com (TGV OR 玻璃通孔 OR 玻璃芯基板 OR 玻璃基板)'),
-    ("国内·芯智讯", 'site:icsmart.cn (TGV OR 玻璃通孔 OR 玻璃芯基板 OR 玻璃基板)'),
-    ("国内·OFweek", 'site:ofweek.com (TGV OR 玻璃通孔 OR 玻璃芯基板 OR 玻璃基板)'),
-    ("国内·全球半导体观察", 'site:dramexchange.com OR site:trendforce.cn (TGV OR 玻璃通孔 OR 玻璃芯基板 OR 玻璃基板)'),
-    ("国内·中国电子报", 'site:ce.cn OR site:cenews.com.cn (TGV OR 玻璃通孔 OR 玻璃芯基板 OR 玻璃基板)'),
-    ("国内·财联社", 'site:cls.cn (TGV OR 玻璃通孔 OR 玻璃芯基板 OR 玻璃基板)'),
-    ("国内·新浪财经", 'site:finance.sina.com.cn (TGV OR 玻璃通孔 OR 玻璃芯基板 OR 玻璃基板)'),
+    # 国内产业/科技/财经公开网站
+    ("国内·爱集微", 'site:ijiwei.com (TGV OR CPO OR 硅光 OR 光互联 OR 1.6T OR 光模块 OR OCS)'),
+    ("国内·电子工程专辑", 'site:eet-china.com (TGV OR CPO OR 硅光 OR 光互联 OR 1.6T OR 光模块)'),
+    ("国内·OFweek", 'site:ofweek.com (TGV OR CPO OR 硅光 OR 光互联 OR 1.6T OR 光模块)'),
+    ("国内·C114", 'site:c114.com.cn (CPO OR 硅光 OR 光互联 OR 800G OR 1.6T OR 光模块)'),
+    ("国内·通信世界", 'site:cww.net.cn (CPO OR 硅光 OR 光互联 OR 800G OR 1.6T OR 光模块)'),
+    ("国内·通信产业网", 'site:ccidcom.com (CPO OR 硅光 OR 光互联 OR 800G OR 1.6T)'),
+    ("国内·芯智讯", 'site:icsmart.cn (TGV OR CPO OR 硅光 OR 光互联 OR 光模块)'),
+    ("国内·未来半导体", 'site:fsemi.tech (TGV OR 玻璃基板 OR CPO OR 硅光 OR 光互联)'),
+    ("国内·半导体产业纵横", 'site:icviews.cn (TGV OR CPO OR 硅光 OR 光互联 OR 光模块)'),
+    ("国内·电子发烧友", 'site:elecfans.com (TGV OR CPO OR 硅光 OR 光互联 OR 1.6T OR 光模块)'),
+    ("国内·与非网", 'site:eefocus.com (TGV OR CPO OR 硅光 OR 光互联 OR 1.6T OR 光模块)'),
+    ("国内·21ic", 'site:21ic.com (TGV OR CPO OR 硅光 OR 光互联 OR 光模块)'),
+    ("国内·EEWorld", 'site:eeworld.com.cn (TGV OR CPO OR 硅光 OR 光互联 OR 光模块)'),
+    ("国内·中国电子报", 'site:ce.cn OR site:cenews.com.cn (TGV OR CPO OR 硅光 OR 光互联 OR 光模块)'),
+    ("国内·证券时报", 'site:stcn.com (TGV OR CPO OR 硅光 OR 光互联 OR 1.6T OR 光模块)'),
+    ("国内·中国证券网", 'site:cnstock.com (TGV OR CPO OR 硅光 OR 光互联 OR 1.6T OR 光模块)'),
+    ("国内·财联社", 'site:cls.cn (TGV OR CPO OR 硅光 OR 光互联 OR 1.6T OR 光模块)'),
+    ("国内·新浪财经", 'site:finance.sina.com.cn (TGV OR CPO OR 硅光 OR 光互联 OR 1.6T OR 光模块)'),
+    ("国内·界面新闻", 'site:jiemian.com (CPO OR 硅光 OR 光互联 OR 光模块 OR 玻璃基板)'),
+    ("国内·第一财经", 'site:yicai.com (CPO OR 硅光 OR 光互联 OR 光模块 OR 玻璃基板)'),
+    ("国内·36氪", 'site:36kr.com (CPO OR 硅光 OR 光互联 OR 光模块 OR 玻璃基板)'),
+    ("国内·钛媒体", 'site:tmtpost.com (CPO OR 硅光 OR 光互联 OR 光模块 OR 玻璃基板)'),
+    ("国内·搜狐科技", 'site:sohu.com (CPO OR 硅光 OR 光互联 OR 1.6T OR 光模块 OR TGV)'),
+    ("国内·网易科技", 'site:163.com (CPO OR 硅光 OR 光互联 OR 1.6T OR 光模块 OR TGV)'),
 ]
 
 FOREIGN_QUERIES = [
-    # 泛检索
-    ("国外·TGV", '("through-glass via" OR "through glass via") semiconductor packaging'),
-    ("国外·GlassCore", '("glass core substrate" OR "glass-core substrate") semiconductor packaging'),
-    ("国外·GlassInterposer", '("glass interposer" OR "glass substrate") (semiconductor OR packaging OR interconnect)'),
-    ("国外·TGVProcess", '("through-glass via" OR "glass core substrate") (laser drilling OR etching OR metallization OR plating OR fabrication)'),
-    ("国外·TGVIndustry", '("through-glass via" OR "glass core substrate") (production OR qualification OR investment OR capacity OR customer)'),
-    ("国外·TGVEquipment", '("through-glass via" OR "glass core substrate") (equipment OR inspection OR plating OR laser OR CMP OR AOI)'),
+    # 泛主题发现
+    ("国外·TGV", '("through-glass via" OR "glass core substrate" OR "glass interposer") semiconductor packaging'),
+    ("国外·CPO", '("co-packaged optics" OR CPO) (AI OR datacenter OR networking OR silicon photonics)'),
+    ("国外·NPO_LPO", '("near-packaged optics" OR "linear pluggable optics" OR NPO OR LPO) datacenter optical'),
+    ("国外·OpticalIO", '("optical I/O" OR "optical interconnect") (AI OR GPU OR accelerator OR scale-up OR scale-out)'),
+    ("国外·SiliconPhotonics", '"silicon photonics" (AI OR datacenter OR CPO OR optical engine)'),
+    ("国外·OpticalEngine", '"optical engine" (CPO OR silicon photonics OR AI datacenter)'),
+    ("国外·Transceiver", '("800G" OR "1.6T" OR "3.2T") (optical transceiver OR optical module) datacenter'),
+    ("国外·OpticalChip", '(InP OR "CW laser" OR DFB OR EML OR VCSEL OR TFLN OR "thin film lithium niobate") optical interconnect'),
+    ("国外·OCS", '("optical circuit switch" OR OCS OR "all-optical switching") AI datacenter'),
+    ("国外·MicroLED", '(MicroLED OR "Micro-LED") ("optical interconnect" OR "optical communication")'),
 
-    # 海外产业媒体 / 研究机构 / 会议 / 企业
-    ("国外·ETNews", 'site:etnews.com OR site:en.etnews.com ("glass substrate" OR "glass core substrate" OR "through-glass via" OR TGV) semiconductor'),
-    ("国外·TheElec", 'site:thelec.net ("glass substrate" OR "glass core substrate" OR "through-glass via" OR TGV) semiconductor'),
-    ("国外·SemiconductorEngineering", 'site:semiengineering.com ("glass substrate" OR "glass core substrate" OR "through-glass via")'),
-    ("国外·3DInCites", 'site:3dincites.com ("glass substrate" OR "glass core substrate" OR "through-glass via")'),
-    ("国外·IEEE", 'site:ieee.org ("through-glass via" OR "glass core substrate" OR "glass interposer")'),
-    ("国外·IMAPS", 'site:imaps.org ("through-glass via" OR "glass core substrate" OR "glass interposer")'),
-    ("国外·ECTC", 'site:ectc.net ("through-glass via" OR "glass core substrate" OR "glass interposer")'),
-    ("国外·imec", 'site:imec-int.com ("glass substrate" OR "glass interposer" OR "through-glass via")'),
-    ("国外·Intel", 'site:intel.com ("glass substrate" OR "glass core substrate" OR "glass interposer")'),
-    ("国外·Corning", 'site:corning.com ("glass substrate" OR "glass interposer" OR "through-glass via") semiconductor'),
-    ("国外·AppliedMaterials", 'site:appliedmaterials.com ("glass substrate" OR "glass core substrate") advanced packaging'),
-    ("国外·SamsungElectroMechanics", 'site:samsungsem.com ("glass core substrate" OR "glass substrate") semiconductor'),
-    ("国外·SCHOTT", 'site:schott-pharma.com OR site:schott.com ("through-glass via" OR "glass substrate") semiconductor'),
-    ("国外·Harmotec", 'site:harmotec.com ("TGV" OR "glass substrate")'),
-    ("国外·AZoM", 'site:azom.com ("through-glass via" OR "glass core substrate")'),
-    ("国外·ResearchGate", 'site:researchgate.net ("through-glass via" OR "glass core substrate")'),
+    # 海外产业媒体
+    ("国外·Lightwave", 'site:lightwaveonline.com (CPO OR silicon photonics OR optical interconnect OR 1.6T OR optical transceiver)'),
+    ("国外·FibreSystems", 'site:fibre-systems.com (CPO OR silicon photonics OR optical interconnect OR 1.6T OR transceiver)'),
+    ("国外·OpticsPhotonicsNews", 'site:optica-opn.org (CPO OR silicon photonics OR optical interconnect OR optical I/O)'),
+    ("国外·PhotonicsSpectra", 'site:photonics.com (CPO OR silicon photonics OR optical interconnect OR optical engine OR TGV)'),
+    ("国外·SemiconductorEngineering", 'site:semiengineering.com (CPO OR silicon photonics OR optical interconnect OR glass substrate OR glass core substrate)'),
+    ("国外·EE Times", 'site:eetimes.com (CPO OR silicon photonics OR optical interconnect OR optical I/O OR glass substrate)'),
+    ("国外·TheRegister", 'site:theregister.com (CPO OR optical interconnect OR silicon photonics OR optical networking)'),
+    ("国外·Tomshardware", 'site:tomshardware.com (CPO OR silicon photonics OR optical interconnect OR glass substrate)'),
+    ("国外·ServeTheHome", 'site:servethehome.com (CPO OR optical interconnect OR silicon photonics OR 1.6T)'),
+    ("国外·DataCenterDynamics", 'site:datacenterdynamics.com (CPO OR optical interconnect OR silicon photonics OR optical networking)'),
+    ("国外·BlocksAndFiles", 'site:blocksandfiles.com (CPO OR optical interconnect OR silicon photonics OR optical networking)'),
+    ("国外·TheElec", 'site:thelec.net (CPO OR silicon photonics OR optical interconnect OR glass substrate OR TGV)'),
+    ("国外·ETNews", 'site:etnews.com OR site:en.etnews.com (CPO OR silicon photonics OR optical interconnect OR glass substrate OR TGV)'),
+    ("国外·NikkeiAsia", 'site:asia.nikkei.com (CPO OR silicon photonics OR optical interconnect OR glass substrate)'),
+    ("国外·TechPowerUp", 'site:techpowerup.com (CPO OR silicon photonics OR optical interconnect OR optical I/O)'),
+    ("国外·AnandTech", 'site:anandtech.com (CPO OR silicon photonics OR optical interconnect)'),
+
+    # 企业官网
+    ("国外·NVIDIA", 'site:nvidia.com (CPO OR silicon photonics OR optical networking OR optical interconnect OR Spectrum-X)'),
+    ("国外·Broadcom", 'site:broadcom.com (CPO OR co-packaged optics OR silicon photonics OR optical engine OR Tomahawk)'),
+    ("国外·Intel", 'site:intel.com (silicon photonics OR optical I/O OR glass substrate OR glass core substrate)'),
+    ("国外·AMD", 'site:amd.com (optical interconnect OR silicon photonics OR CPO)'),
+    ("国外·Marvell", 'site:marvell.com (CPO OR silicon photonics OR optical interconnect OR 1.6T OR DSP)'),
+    ("国外·Cisco", 'site:cisco.com (CPO OR silicon photonics OR optical interconnect OR optical networking)'),
+    ("国外·Coherent", 'site:coherent.com (CPO OR optical engine OR silicon photonics OR 1.6T OR CW laser)'),
+    ("国外·Lumentum", 'site:lumentum.com (CPO OR CW laser OR optical interconnect OR 1.6T OR photonics)'),
+    ("国外·Corning", 'site:corning.com (glass substrate OR glass interposer OR optical interconnect) semiconductor'),
+    ("国外·AppliedMaterials", 'site:appliedmaterials.com (glass substrate OR silicon photonics OR advanced packaging)'),
+    ("国外·TSMC", 'site:tsmc.com (silicon photonics OR CPO OR COUPE OR photonics)'),
+    ("国外·Samsung", 'site:samsung.com OR site:samsungsem.com (glass core substrate OR silicon photonics OR optical interconnect)'),
+    ("国外·GlobalFoundries", 'site:gf.com (silicon photonics OR optical interconnect OR CPO)'),
+    ("国外·TowerSemiconductor", 'site:towersemi.com (silicon photonics OR SiPho OR optical)'),
+    ("国外·AyarLabs", 'site:ayarlabs.com (optical I/O OR optical interconnect OR CPO)'),
+    ("国外·Lightmatter", 'site:lightmatter.co (optical interconnect OR Passage OR photonic)'),
+    ("国外·CelestialAI", 'site:celestial.ai (optical interconnect OR photonic fabric)'),
+    ("国外·Ranovus", 'site:ranovus.com (CPO OR optical engine OR silicon photonics)'),
+
+    # 会议/机构/研究
+    ("国外·OFC", 'site:ofcconference.org (CPO OR optical interconnect OR silicon photonics OR optical I/O OR 1.6T)'),
+    ("国外·ECOC", 'site:ecoc.org OR site:ecoc2026.org (CPO OR optical interconnect OR silicon photonics OR 1.6T)'),
+    ("国外·ECTC", 'site:ectc.net (TGV OR glass substrate OR glass core substrate OR photonics)'),
+    ("国外·IEEE", 'site:ieee.org (CPO OR optical interconnect OR silicon photonics OR glass core substrate OR TGV)'),
+    ("国外·Optica", 'site:optica.org (CPO OR optical interconnect OR silicon photonics OR optical I/O)'),
+    ("国外·SPIE", 'site:spie.org (CPO OR optical interconnect OR silicon photonics OR optical I/O OR TGV)'),
+    ("国外·imec", 'site:imec-int.com (silicon photonics OR optical interconnect OR glass substrate OR photonics)'),
+    ("国外·IMAPS", 'site:imaps.org (glass substrate OR through-glass via OR photonics OR optical interconnect)'),
+    ("国外·arXiv", 'site:arxiv.org ("optical interconnect" OR "optical I/O" OR "silicon photonics" OR "co-packaged optics" OR "glass core substrate")'),
 ]
 
-STRONG_TERMS = [
-    "through-glass via", "through glass via", "through glass vias", "glass core substrate",
-    "glass-core substrate", "glass interposer", "玻璃通孔", "玻璃互连孔", "玻璃芯基板", "玻璃中介层"
-]
-TGV_CONTEXT = [
-    "semiconductor", "packaging", "package", "substrate", "interposer", "wafer", "via",
-    "半导体", "封装", "基板", "中介层", "晶圆", "通孔", "芯片"
-]
+TOPIC_TERMS = {
+    "TGV/玻璃基板": ["through-glass via","through glass via","glass core substrate","glass-core substrate","glass interposer","玻璃通孔","玻璃互连孔","玻璃芯基板","玻璃中介层"],
+    "CPO/NPO/LPO": ["co-packaged optics","near-packaged optics","linear pluggable optics","共封装光学","近封装光学","线性可插拔","cpo","npo","lpo","lro"],
+    "AI光互联": ["optical interconnect","optical i/o","optical io","光互联","光互连","光互連","scale-up","scale-out","gpu interconnect"],
+    "硅光/光引擎": ["silicon photonics","silicon photonic","siph","optical engine","photonic integrated circuit","硅光","硅光子","矽光","光引擎"],
+    "光芯片/器件": ["cw laser","dfb","eml","vcsel","thin film lithium niobate","tfln","磷化铟","光芯片","激光器","调制器"],
+    "高速光模块": ["800g","1.6t","3.2t","400g/lane","200g/lane","optical transceiver","optical module","光模块"],
+    "OCS/光交换": ["optical circuit switch","all-optical switching","光路交换","光电路交换","全光交换","ocs"],
+    "MicroLED光互联": ["micro-led","microled"],
+}
+CONTEXT_TERMS = ["ai","datacenter","data center","gpu","accelerator","switch","ethernet","optical","photon","semiconductor","packaging","光","算力","数据中心","交换机","半导体","封装"]
 
 def clean(value):
     value = re.sub(r"<[^>]+>", " ", value or "")
@@ -87,39 +143,52 @@ def parse_date(value):
     except Exception:
         return ""
 
-def is_tgv_relevant(text):
-    t = (text or "").lower()
-    if any(term in t for term in STRONG_TERMS):
-        return True
-    # 单独出现 TGV 时必须同时具备半导体/封装上下文，避免法国高速列车误报。
-    return bool(re.search(r"\btgv\b", t)) and any(k in t for k in TGV_CONTEXT)
+def topic_for(text):
+    t=(text or "").lower()
+    hits=[]
+    for topic, terms in TOPIC_TERMS.items():
+        for term in terms:
+            # Very short acronyms need token boundaries to avoid false positives.
+            if len(term) <= 4 and term.isascii() and term.replace("-","").isalnum():
+                if re.search(r"(?<![a-z0-9])"+re.escape(term)+r"(?![a-z0-9])", t):
+                    hits.append(topic); break
+            elif term in t:
+                hits.append(topic); break
+    if "光芯片/器件" in hits and not any(k in t for k in CONTEXT_TERMS):
+        hits.remove("光芯片/器件")
+    if "MicroLED光互联" in hits and not any(k in t for k in ["optical","光互联","光互连","光通信","photon"]):
+        hits.remove("MicroLED光互联")
+    return hits
+
+def is_relevant(text):
+    return bool(topic_for(text))
 
 def classify(text):
     t=(text or "").lower()
-    if any(k in t for k in ["laser drilling","etching","metallization","plating","fabrication","工艺","激光","蚀刻","金属化","电镀","填孔"]):
-        return "工艺技术"
-    if any(k in t for k in ["production","capacity","investment","qualification","customer","量产","产线","扩产","投资","客户验证"]):
+    if any(k in t for k in ["process","fabrication","laser drilling","etching","metallization","plating","modulator","architecture","工艺","激光","蚀刻","金属化","电镀","架构","调制"]):
+        return "技术进展"
+    if any(k in t for k in ["production","capacity","investment","qualification","customer","shipment","order","partnership","量产","产线","扩产","投资","客户验证","订单","合作"]):
         return "产业进展"
-    if any(k in t for k in ["patent","research","paper","conference","论文","专利","研究"]):
-        return "研发/论文"
-    return "综合资讯"
+    if any(k in t for k in ["paper","research","conference","patent","论文","研究","会议","专利"]):
+        return "研发/会议"
+    return "行业资讯"
 
 def needs_translation(text):
     if not text: return False
     latin=len(re.findall(r"[A-Za-z]",text))
     cjk=len(re.findall(r"[\u4e00-\u9fff]",text))
-    return latin >= 8 and latin > cjk * 1.5
+    return latin >= 8 and latin > cjk*1.5
 
 def translate_zh(text):
     if not text or not needs_translation(text):
         return text
     try:
-        q=urllib.parse.urlencode({"client":"gtx","sl":"auto","tl":"zh-CN","dt":"t","q":text[:1200]})
+        q=urllib.parse.urlencode({"client":"gtx","sl":"auto","tl":"zh-CN","dt":"t","q":text[:700]})
         req=urllib.request.Request(TRANSLATION_ENDPOINT+"?"+q,headers=HEADERS)
-        with urllib.request.urlopen(req,timeout=4) as r:
+        with urllib.request.urlopen(req,timeout=3) as r:
             data=json.load(r)
-        translated="".join(p[0] for p in data[0] if p and p[0]).strip()
-        return translated if translated else text
+        out="".join(p[0] for p in data[0] if p and p[0]).strip()
+        return out if out else text
     except Exception:
         return text
 
@@ -130,33 +199,31 @@ def fetch_google(group, query, source_type, chinese=False):
     with urllib.request.urlopen(req,timeout=12) as r:
         root=ET.fromstring(r.read())
     rows=[]
-    for item in root.findall(".//item")[:60]:
+    for item in root.findall(".//item")[:80]:
         title=clean(item.findtext("title"))
         summary=clean(item.findtext("description"))
         link=(item.findtext("link") or "").strip()
         source=clean(item.findtext("source")) or group
-        text=title+" "+summary
-        if not title or not link or not is_tgv_relevant(text):
+        if summary == title: summary=""
+        text=title+" "+summary+" "+query
+        if not title or not link or not is_relevant(text):
             continue
         rows.append({
-            "source_group":group,
-            "source_type":source_type,
-            "source":source,
-            "original_title":title,
-            "original_summary":summary if summary != title else "",
-            "date":parse_date(item.findtext("pubDate") or ""),
-            "url":link,
+            "source_group":group, "source_type":source_type, "source":source,
+            "original_title":title, "original_summary":summary,
+            "date":parse_date(item.findtext("pubDate") or ""), "url":link,
+            "topics":topic_for(title+" "+summary+" "+query)
         })
     return rows
 
 def collect():
     jobs=[]
-    with ThreadPoolExecutor(max_workers=8) as pool:
+    rows=[]
+    with ThreadPoolExecutor(max_workers=10) as pool:
         for g,q in DOMESTIC_QUERIES:
             jobs.append(pool.submit(fetch_google,g,q,"国内网站",True))
         for g,q in FOREIGN_QUERIES:
             jobs.append(pool.submit(fetch_google,g,q,"国外网站",False))
-        rows=[]
         for f in as_completed(jobs):
             try:
                 rows.extend(f.result())
@@ -164,64 +231,96 @@ def collect():
                 print("检索失败：",str(exc)[:120])
     return rows
 
-def main():
-    rows=collect()
-    dedup={}
-    for r in rows:
-        key=(r["source_type"], re.sub(r"\W+","",r["original_title"].lower()))
-        if key not in dedup:
-            dedup[key]=r
-    rows=list(dedup.values())
+def load_previous():
+    try:
+        with open(DATA_FILE,"r",encoding="utf-8") as f:
+            d=json.load(f)
+        return d.get("news",[]) if isinstance(d.get("news"),list) else []
+    except Exception:
+        return []
 
-    # 仅翻译最新的国外标题，失败则直接保留原文，不阻塞采集。
-    foreign=[r for r in rows if r["source_type"]=="国外网站"]
+def main():
+    previous=load_previous()
+    rows=collect()
+
+    # URL + normalized title双重去重，减少同一新闻被多个查询重复收录。
+    seen_urls=set()
+    seen_titles=set()
+    dedup=[]
+    for r in sorted(rows,key=lambda x:x.get("date",""),reverse=True):
+        nt=re.sub(r"[^a-z0-9\u4e00-\u9fff]+","",r["original_title"].lower())
+        if r["url"] in seen_urls or (nt and nt in seen_titles):
+            continue
+        seen_urls.add(r["url"]); seen_titles.add(nt); dedup.append(r)
+
+    # 翻译仅用于最近国外标题，翻译失败直接保留英文，不影响采集。
+    foreign=[r for r in dedup if r["source_type"]=="国外网站"]
     foreign.sort(key=lambda x:x.get("date",""),reverse=True)
-    translate_targets=set(id(x) for x in foreign[:80])
+    translate_ids=set(id(x) for x in foreign[:100])
 
     news=[]
-    for r in rows:
+    for r in dedup:
         raw_title=r["original_title"]
-        raw_summary=r["original_summary"]
-        title=translate_zh(raw_title) if id(r) in translate_targets else raw_title
-        summary=raw_summary
+        title=translate_zh(raw_title) if id(r) in translate_ids else raw_title
         news.append({
             "title":title,
             "original_title":raw_title,
-            "summary":summary,
-            "original_summary":raw_summary,
+            "summary":r["original_summary"],
+            "original_summary":r["original_summary"],
             "date":r["date"],
             "source":r["source"],
             "source_group":r["source_group"],
             "source_type":r["source_type"],
-            "category":classify(raw_title+" "+raw_summary),
+            "category":classify(raw_title+" "+r["original_summary"]),
             "url":r["url"],
             "translation_status":"已翻译标题" if title != raw_title else "原文",
-            "topics":["TGV/玻璃基板"],
+            "topics":r["topics"],
             "relevance_level":"核心相关",
         })
 
-    news.sort(key=lambda x:x.get("date",""),reverse=True)
-    # 只保留有日期且 90 天内的归档，页面再提供 3/7/30 天筛选。
-    cutoff=datetime.now(timezone.utc).timestamp()-90*86400
+    # 保留此前仍在监测范围内、且180天以内的历史记录，避免每天刷新造成归档骤减。
+    known={n["url"] for n in news}
+    for old in previous:
+        if not isinstance(old,dict) or not old.get("url") or old["url"] in known:
+            continue
+        text=" ".join(str(old.get(k,"")) for k in ("title","original_title","summary","original_summary","source_group"))
+        topics=topic_for(text)
+        if not topics:
+            continue
+        old["topics"]=topics
+        if old.get("source_type") not in ("国内网站","国外网站"):
+            # 基于是否主要为中文来归入国内/国外，历史记录只作补充。
+            cjk=len(re.findall(r"[\u4e00-\u9fff]",text))
+            latin=len(re.findall(r"[A-Za-z]",text))
+            old["source_type"]="国内网站" if cjk >= latin*0.3 else "国外网站"
+        news.append(old); known.add(old["url"])
+
+    cutoff=datetime.now(timezone.utc).timestamp()-180*86400
     kept=[]
     for n in news:
         try:
-            ts=datetime.strptime(n["date"],"%Y-%m-%d").replace(tzinfo=timezone.utc).timestamp()
-            if ts >= cutoff: kept.append(n)
+            ts=datetime.strptime(n.get("date",""),"%Y-%m-%d").replace(tzinfo=timezone.utc).timestamp()
+            if ts >= cutoff:
+                kept.append(n)
         except Exception:
             pass
 
+    kept.sort(key=lambda x:x.get("date",""),reverse=True)
+    kept=kept[:2500]
     tmp=DATA_FILE+".tmp"
     with open(tmp,"w",encoding="utf-8") as f:
         json.dump({
             "updated_at":datetime.now(timezone.utc).isoformat(),
-            "scope":"TGV / Through-Glass Via / Glass Core Substrate only",
-            "news":kept[:1200]
+            "scope":"TGV + AI高速光互联全链路；国内网站 + 国外网站；无微信公众号采集",
+            "news":kept
         },f,ensure_ascii=False,indent=2)
     os.replace(tmp,DATA_FILE)
-    cn=sum(1 for n in kept if n["source_type"]=="国内网站")
-    foreign_n=sum(1 for n in kept if n["source_type"]=="国外网站")
-    print(f"完成：共 {len(kept)} 条；国内网站 {cn} 条；国外网站 {foreign_n} 条。")
+
+    cn=sum(1 for n in kept if n.get("source_type")=="国内网站")
+    foreign_n=sum(1 for n in kept if n.get("source_type")=="国外网站")
+    topic_stats={k:sum(1 for n in kept if k in n.get("topics",[])) for k in TOPIC_TERMS}
+    print(f"完成：归档 {len(kept)} 条；国内网站 {cn} 条；国外网站 {foreign_n} 条。")
+    print("主题："+"；".join(f"{k} {v}" for k,v in topic_stats.items()))
 
 if __name__=="__main__":
     main()
