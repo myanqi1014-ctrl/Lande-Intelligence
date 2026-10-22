@@ -524,28 +524,28 @@ def main():
             cache[osum] = tsum
         raw_t = item.get("source_original_title")
         raw_s = item.get("source_original_summary")
-        if raw_t and item.get("title"):
+        if raw_t and item.get("title") and translation_is_valid(raw_t, item.get("title", "")):
             cached_summary = item.get("summary", "")
-            cache[raw_t + "\n<<<SUMMARY>>>\n" + (raw_s or "")[:700]] = item.get("title", "") + "\n<<<SUMMARY>>>\n" + cached_summary
+            if (not raw_s) or translation_is_valid((raw_s or "")[:700], cached_summary):
+                cache[raw_t + "\n<<<SUMMARY>>>\n" + (raw_s or "")[:700]] = item.get("title", "") + "\n<<<SUMMARY>>>\n" + cached_summary
     # Translate title + summary together: one request per article instead of two.
     SEP = "\n<<<SUMMARY>>>\n"
     bundles = []
-    for row in found:
+    for row in found[:350]:
         source_title = row.get("original_title", "")
         source_summary = row.get("original_summary", "")[:700]
         bundles.append(source_title + SEP + source_summary)
-    translate_many(bundles, cache, workers=2)
+    translate_many(bundles, cache, workers=4)
 
     news = []
     for row in found:
         source_title = row["original_title"]
         source_summary = row["original_summary"]
         bundle = source_title + SEP + source_summary[:700]
-        translated_bundle = cache.get(bundle) or translate_zh(bundle, cache)
+        translated_bundle = cache.get(bundle) or bundle
         if SEP in translated_bundle:
             title, summary = translated_bundle.split(SEP, 1)
         else:
-            # Translation engines may alter whitespace but normally preserve the sentinel text.
             parts = re.split(r"<<<SUMMARY>>>", translated_bundle, maxsplit=1)
             title = parts[0].strip()
             summary = parts[1].strip() if len(parts) > 1 else ""
@@ -567,7 +567,7 @@ def main():
             "source_type": row.get("source_type", "产业资讯"),
             "category": category_for(source_title + " " + source_summary),
             "url": row["url"],
-            "translation_status": ("已翻译为简体中文；原始语言文本后台保留" if not needs_zh_translation(title) else "翻译失败，保留原文"),
+            "translation_status": ("已翻译为简体中文；原始语言文本后台保留" if (not needs_zh_translation(title) and not needs_zh_translation(summary)) else "部分或全部翻译失败，保留原文"),
             "relevance": row["relevance_level"] + "：关键词规则初筛通过，仍需人工核验",
             "relevance_level": row["relevance_level"],
             "topics": topic_for(source_title + " " + source_summary),
@@ -602,7 +602,7 @@ def main():
             "updated_at": datetime.now(timezone.utc).isoformat(),
             "source_queries_succeeded": successes + web_successes + wechat_account_successes + arxiv_successes,
             "source_queries_total": len(QUERIES) + len(WEB_QUERIES) + len(WECHAT_ACCOUNTS) + len(ARXIV_QUERIES),
-            "search_method": "AI high-speed optical interconnect monitoring: TGV/glass substrates, CPO/NPO/LPO, silicon photonics, optical engines, optical chips/devices, high-speed transceivers, scale-up/scale-out optical I/O, OCS and MicroLED optical interconnect; Multi-channel discovery: expanded global-English and Chinese Google News queries, dedicated public-web discovery for indexed WeChat pages, direct arXiv API, plus official company and conference/institution discovery. All visible titles and summaries are normalized to Simplified Chinese while raw source-language text is retained separately.",
+            "search_method": "AI high-speed optical interconnect monitoring: TGV/glass substrates, CPO/NPO/LPO, silicon photonics, optical engines, optical chips/devices, high-speed transceivers, scale-up/scale-out optical I/O, OCS and MicroLED optical interconnect; Multi-channel discovery: expanded global-English and Chinese Google News queries, dedicated public-web discovery for indexed WeChat pages, direct arXiv API, plus official company and conference/institution discovery. Visible titles and summaries are translated to Simplified Chinese when translation succeeds; failures fall back to the original text so collection can finish reliably.",
             "news": news
         }, f, ensure_ascii=False, indent=2)
     os.replace(temp, DATA_FILE)
