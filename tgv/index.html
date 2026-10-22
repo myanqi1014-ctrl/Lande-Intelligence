@@ -17,24 +17,35 @@ header{background:#122743;color:#fff;padding:28px max(22px,calc((100% - 1120px)/
 <body>
 <header>
   <h1>TGV技术情报更新</h1>
-  <p>仅跟踪 TGV · Through-Glass Via · 玻璃通孔 · 玻璃芯基板 · Glass Core Substrate</p>
+  <p>TGV · 玻璃基板 · CPO/NPO/LPO · AI 光互联 · 硅光 · 光引擎 · 光芯片 · 高速光模块 · OCS · MicroLED 光互联</p>
 </header>
 <main class="wrap">
   <div class="status" id="status">正在读取新闻数据……</div>
 
   <div class="toolbar">
-    <input id="q" placeholder="搜索 TGV、玻璃通孔、玻璃芯基板、企业、工艺……">
+    <input id="q" placeholder="搜索 TGV、CPO、硅光、光互联、光模块、企业……">
     <select id="stype">
       <option value="">国内 + 国外</option>
       <option value="国内网站">国内网站</option>
       <option value="国外网站">国外网站</option>
     </select>
+    <select id="topic">
+      <option value="">全部技术方向</option>
+      <option value="TGV/玻璃基板">TGV/玻璃基板</option>
+      <option value="CPO/NPO/LPO">CPO/NPO/LPO</option>
+      <option value="AI光互联">AI光互联</option>
+      <option value="硅光/光引擎">硅光/光引擎</option>
+      <option value="光芯片/器件">光芯片/器件</option>
+      <option value="高速光模块">高速光模块</option>
+      <option value="OCS/光交换">OCS/光交换</option>
+      <option value="MicroLED光互联">MicroLED光互联</option>
+    </select>
     <select id="cat">
       <option value="">全部内容</option>
-      <option value="工艺技术">工艺技术</option>
+      <option value="技术进展">技术进展</option>
       <option value="产业进展">产业进展</option>
-      <option value="研发/论文">研发/论文</option>
-      <option value="综合资讯">综合资讯</option>
+      <option value="研发/会议">研发/会议</option>
+      <option value="行业资讯">行业资讯</option>
     </select>
     <select id="period">
       <option value="3">最近 3 天</option>
@@ -56,17 +67,21 @@ header{background:#122743;color:#fff;padding:28px max(22px,calc((100% - 1120px)/
       <div class="panel side">
         <h3>当前监测范围</h3>
         <ul>
-          <li>TGV / Through-Glass Via</li>
-          <li>玻璃通孔 / 玻璃互连孔</li>
-          <li>玻璃芯基板 / Glass Core Substrate</li>
-          <li>玻璃中介层 / Glass Interposer</li>
+          <li>TGV / 玻璃基板</li>
+          <li>CPO / NPO / LPO</li>
+          <li>AI 光互联 / Optical I/O</li>
+          <li>硅光 / 光引擎</li>
+          <li>光芯片 / 激光器 / 调制器</li>
+          <li>800G / 1.6T / 3.2T 光模块</li>
+          <li>OCS / 全光交换</li>
+          <li>MicroLED 光互联</li>
         </ul>
       </div>
       <div class="panel side">
         <h3>来源说明</h3>
         <p><b>国内网站</b>：中文科技媒体、半导体产业媒体、企业与行业网站。</p>
         <p><b>国外网站</b>：海外半导体媒体、企业官网、研究机构和会议网站。</p>
-        <p>已取消公众号、CPO/NPO、硅光、光模块等其他主题采集。</p>
+        <p>不抓微信公众号；重点扩大可公开索引的国内外科技媒体、产业媒体、企业官网、研究机构和会议网站。</p>
       </div>
       <div class="panel side">
         <h3>更新频率</h3>
@@ -82,10 +97,10 @@ function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){retur
 function safeUrl(v){try{var u=new URL(v);return ['https:','http:'].indexOf(u.protocol)>=0?u.href:''}catch(e){return ''}}
 function dayDiff(s){if(!/^\d{4}-\d{2}-\d{2}$/.test(s||''))return 99999;return (Date.now()-new Date(s+'T00:00:00Z').getTime())/86400000}
 function render(){
-  var q=$('q').value.trim().toLowerCase(),stype=$('stype').value,cat=$('cat').value,period=Number($('period').value);
+  var q=$('q').value.trim().toLowerCase(),stype=$('stype').value,topic=$('topic').value,cat=$('cat').value,period=Number($('period').value);
   var list=allNews.filter(function(n){
     var text=[n.title,n.original_title,n.summary,n.original_summary,n.source,n.source_group,n.category].join(' ').toLowerCase();
-    return (!stype||n.source_type===stype)&&(!cat||n.category===cat)&&dayDiff(n.date)<=period&&text.indexOf(q)>=0;
+    return (!stype||n.source_type===stype)&&(!topic||(n.topics||[]).indexOf(topic)>=0)&&(!cat||n.category===cat)&&dayDiff(n.date)<=period&&text.indexOf(q)>=0;
   });
   list.sort(function(a,b){return (b.date||'').localeCompare(a.date||'')});
   $('count').textContent=list.length;
@@ -94,7 +109,7 @@ function render(){
   $('list').innerHTML=list.length?list.map(function(n){
     var u=safeUrl(n.url);
     return '<article class="article">'+
-      '<div><span class="tag source">'+esc(n.source_type||'来源未分类')+'</span><span class="tag">'+esc(n.category||'综合资讯')+'</span><span class="tag source">'+esc(n.source||'来源未注明')+'</span></div>'+
+      '<div><span class="tag source">'+esc(n.source_type||'来源未分类')+'</span>'+(n.topics||[]).map(function(t){return '<span class="tag">'+esc(t)+'</span>'}).join('')+'<span class="tag">'+esc(n.category||'行业资讯')+'</span><span class="tag source">'+esc(n.source||'来源未注明')+'</span></div>'+
       '<h3>'+esc(n.title||n.original_title)+'</h3>'+
       '<div class="meta">发布日期：'+esc(n.date||'未注明')+' · '+esc(n.translation_status||'原文')+'</div>'+
       (n.summary?'<p>'+esc(n.summary)+'</p>':'')+
@@ -110,14 +125,14 @@ async function load(){
     if(!r.ok)throw Error('HTTP '+r.status);
     var d=await r.json();allNews=Array.isArray(d.news)?d.news:[];
     var when=d.updated_at?new Date(d.updated_at).toLocaleString():'尚无更新时间';
-    $('status').textContent='最近采集更新时间：'+when+' · 当前 TGV 归档 '+allNews.length+' 条';
+    $('status').textContent='最近采集更新时间：'+when+' · 当前 TGV 归档 '+allNews.length+' 条（TGV + 光互联全链路）';
     render();
   }catch(e){
     $('status').textContent='新闻数据读取失败';
     $('list').innerHTML='<div class="empty">news.json 暂时无法读取，请稍后刷新。</div>';
   }
 }
-$('q').addEventListener('input',render);['stype','cat','period'].forEach(function(id){$(id).addEventListener('change',render)});
+$('q').addEventListener('input',render);['stype','topic','cat','period'].forEach(function(id){$(id).addEventListener('change',render)});
 $('refresh').addEventListener('click',load);load();
 </script>
 </body>
