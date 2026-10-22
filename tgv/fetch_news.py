@@ -90,6 +90,60 @@ WEB_QUERIES = [
     ("微信公众号·MicroLED", 'site:mp.weixin.qq.com MicroLED 光互联 光通信'),
 ]
 
+
+# Priority WeChat/public-account watchlist. These are searched by account name + topic terms
+# through public web indexing. This improves precision but still cannot equal WeChat Search coverage.
+WECHAT_ACCOUNTS = [
+    # 行业媒体 / 产业资讯
+    "讯石光通讯",
+    "ICC讯石",
+    "光通信女人",
+    "C114通信网",
+    "光电汇OESHOW",
+    "中国电子报",
+    "半导体行业观察",
+    "芯智讯",
+    "全球半导体观察",
+    "TrendForce集邦咨询",
+    "LEDinside",
+    "电子工程专辑",
+    "爱集微",
+    "芯东西",
+    "光纤在线",
+
+    # 券商 / 产业研究
+    "国盛通信",
+    "中信建投通信",
+    "天风通信",
+    "华西通信",
+    "申万通信",
+
+    # 企业官方
+    "中际旭创",
+    "新易盛",
+    "光迅科技",
+    "华工科技",
+    "天孚通信",
+    "源杰科技",
+    "长光华芯",
+    "仕佳光子",
+    "光库科技",
+    "博创科技",
+]
+
+WECHAT_TOPIC_TERMS = [
+    "CPO 共封装光学",
+    "NPO LPO",
+    "硅光 硅光子 光引擎",
+    "光互联 光互连 Optical I/O",
+    "800G 1.6T 3.2T 光模块",
+    "InP 磷化铟 CW激光器 DFB EML",
+    "TFLN 薄膜铌酸锂",
+    "TGV 玻璃通孔 玻璃基板 玻璃芯基板",
+    "OCS 光交换",
+    "MicroLED 光互联",
+]
+
 ARXIV_QUERIES = [
     ("arXiv·CPO光互联", 'all:"co-packaged optics" OR all:"optical interconnect" OR all:"optical I/O"'),
     ("arXiv·硅光光引擎", 'all:"silicon photonics" OR all:"optical engine"'),
@@ -337,6 +391,28 @@ def fetch_bing_web(query_group, query):
         })
     return rows[:30]
 
+
+def fetch_wechat_accounts():
+    """Targeted public-web discovery for priority WeChat accounts."""
+    rows = []
+    seen = set()
+    for account in WECHAT_ACCOUNTS:
+        # One combined query per account keeps runtime reasonable while preserving targeted discovery.
+        query = f'site:mp.weixin.qq.com "{account}" (CPO OR NPO OR LPO OR 硅光 OR 光互联 OR 光互连 OR 光模块 OR 800G OR 1.6T OR TGV OR 玻璃基板 OR OCS OR TFLN OR MicroLED)'
+        try:
+            found = fetch_bing_web("重点公众号·" + account, query)
+            for row in found:
+                if row["url"] in seen:
+                    continue
+                seen.add(row["url"])
+                row["source"] = account
+                row["source_type"] = "微信/重点公众号"
+                rows.append(row)
+        except Exception as exc:
+            print(f"重点公众号检索失败 [{account}]: {str(exc)[:120]}")
+    return rows
+
+
 def fetch_arxiv(query_group, query):
     """Direct arXiv API ingestion; independent of Google News indexing."""
     params = urllib.parse.urlencode({
@@ -403,6 +479,14 @@ def main():
             print(f"{group} [公开网页]: {len(rows)} 条相关结果")
         except Exception as exc:
             print(f"公开网页检索失败 [{group}]: {str(exc)[:160]}")
+
+    wechat_account_rows = fetch_wechat_accounts()
+    wechat_account_successes = len(WECHAT_ACCOUNTS)
+    for row in wechat_account_rows:
+        if row["url"] not in seen:
+            seen.add(row["url"])
+            found.append(row)
+    print(f"重点公众号白名单：发现 {len(wechat_account_rows)} 条公开索引结果")
 
     arxiv_successes = 0
     for group, query in ARXIV_QUERIES:
@@ -496,8 +580,8 @@ def main():
     with open(temp, "w", encoding="utf-8") as f:
         json.dump({
             "updated_at": datetime.now(timezone.utc).isoformat(),
-            "source_queries_succeeded": successes + web_successes + arxiv_successes,
-            "source_queries_total": len(QUERIES) + len(WEB_QUERIES) + len(ARXIV_QUERIES),
+            "source_queries_succeeded": successes + web_successes + wechat_account_successes + arxiv_successes,
+            "source_queries_total": len(QUERIES) + len(WEB_QUERIES) + len(WECHAT_ACCOUNTS) + len(ARXIV_QUERIES),
             "search_method": "AI high-speed optical interconnect monitoring: TGV/glass substrates, CPO/NPO/LPO, silicon photonics, optical engines, optical chips/devices, high-speed transceivers, scale-up/scale-out optical I/O, OCS and MicroLED optical interconnect; Multi-channel discovery: expanded global-English and Chinese Google News queries, dedicated public-web discovery for indexed WeChat pages, direct arXiv API, plus official company and conference/institution discovery. All visible titles and summaries are normalized to Simplified Chinese while raw source-language text is retained separately.",
             "news": news
         }, f, ensure_ascii=False, indent=2)
@@ -505,7 +589,7 @@ def main():
     direct_count = sum(1 for n in news if n.get("relevance_level") == "核心相关")
     related_count = sum(1 for n in news if n.get("relevance_level") == "产业链相关")
     types = {name: sum(1 for n in news if n.get("content_type") == name) for name in ("技术进展", "产业化进展", "市场观察", "待核验")}
-    print(f"完成：Google News {successes}/{len(QUERIES)}；公开网页 {web_successes}/{len(WEB_QUERIES)}；arXiv {arxiv_successes}/{len(ARXIV_QUERIES)}；归档 {len(news)} 条；核心相关 {direct_count} 条，产业链相关 {related_count} 条。")
+    print(f"完成：Google News {successes}/{len(QUERIES)}；公开网页 {web_successes}/{len(WEB_QUERIES)}；重点公众号 {len(wechat_account_rows)} 条；arXiv {arxiv_successes}/{len(ARXIV_QUERIES)}；归档 {len(news)} 条；核心相关 {direct_count} 条，产业链相关 {related_count} 条。")
     print("内容质量分类：" + "；".join(f"{k} {v} 条" for k, v in types.items()))
     print("说明：微信公众号仅能发现被公开索引的文章；未被索引、需登录或受限制的文章不会保证采集到。")
 
