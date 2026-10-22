@@ -61,6 +61,8 @@ DOMESTIC_QUERIES = [
     ("国内·爱集微", 'site:ijiwei.com (TGV OR CPO OR 硅光 OR 光互联 OR 1.6T OR 光模块 OR OCS)'),
     ("国内·电子工程专辑", 'site:eet-china.com (TGV OR CPO OR 硅光 OR 光互联 OR 1.6T OR 光模块)'),
     ("国内·OFweek", 'site:ofweek.com (TGV OR CPO OR 硅光 OR 光互联 OR 1.6T OR 光模块)'),
+    ("国内·讯石光通讯", 'site:iccsz.com (CPO OR NPO OR LPO OR 硅光 OR 光互联 OR 光模块 OR 800G OR 1.6T OR 3.2T OR OCS OR TFLN OR TGV OR 玻璃基板)'),
+    ("国内·CIOE", 'site:cioe.cn OR site:conference.cioe.cn (CPO OR 硅光 OR 光互联 OR 光模块 OR OCS OR MicroLED OR TGV OR 玻璃基板)'),
     ("国内·C114", 'site:c114.com.cn (CPO OR 硅光 OR 光互联 OR 800G OR 1.6T OR 光模块)'),
     ("国内·通信世界", 'site:cww.net.cn (CPO OR 硅光 OR 光互联 OR 800G OR 1.6T OR 光模块)'),
     ("国内·通信产业网", 'site:ccidcom.com (CPO OR 硅光 OR 光互联 OR 800G OR 1.6T)'),
@@ -129,6 +131,19 @@ FOREIGN_QUERIES = [
     ("国外·SemiAnalysis", 'site:semianalysis.com (CPO OR "optical interconnect" OR "silicon photonics" OR "scale-up" OR "scale-out" OR photonics)'),
     ("国外·SemiWiki", 'site:semiwiki.com (CPO OR "silicon photonics" OR "optical interconnect" OR "glass substrate" OR photonics)'),
     ("国外·SemiEngineeringPhotonics", 'site:semiengineering.com photonics (CPO OR silicon OR optical OR interconnect)'),
+    ("国外·optics.org", 'site:optics.org (CPO OR "silicon photonics" OR "optical interconnect" OR "optical engine" OR OCS OR "CW laser" OR 1.6T OR TGV)'),
+    ("国外·SemiconductorToday", 'site:semiconductor-today.com (InP OR laser OR "silicon photonics" OR CPO OR "optical interconnect" OR photonics)'),
+    ("国外·SDxCentral", 'site:sdxcentral.com (CPO OR NPO OR "optical interconnect" OR "optical I/O" OR "scale-up" OR "scale-out" OR silicon photonics)'),
+    ("国外·CompoundSemiconductor", 'site:compoundsemiconductor.net (InP OR VCSEL OR laser OR photonics OR "silicon photonics" OR optical)'),
+    ("国外·LaserFocusWorld", 'site:laserfocusworld.com (silicon photonics OR CPO OR "optical interconnect" OR laser OR photonics OR optical engine)'),
+    ("国外·TheNextPlatform", 'site:nextplatform.com (optical interconnect OR CPO OR scale-up OR scale-out OR silicon photonics OR optical networking)'),
+    ("国外·DataCenterKnowledge", 'site:datacenterknowledge.com (optical interconnect OR CPO OR silicon photonics OR optical networking OR AI datacenter)'),
+    ("国外·DataCenterFrontier", 'site:datacenterfrontier.com (optical interconnect OR CPO OR silicon photonics OR optical networking OR AI infrastructure)'),
+    ("国外·NetworkWorld", 'site:networkworld.com (CPO OR optical interconnect OR silicon photonics OR 800G OR 1.6T OR optical networking)'),
+    ("国外·DesignReuse", 'site:design-reuse.com (silicon photonics OR CPO OR chiplet OR optical interconnect OR advanced packaging)'),
+    ("国外·AllAboutCircuits", 'site:allaboutcircuits.com (silicon photonics OR CPO OR optical interconnect OR photonics OR optical transceiver)'),
+    ("国外·SemiconductorDigest", 'site:semiconductordigest.com (glass substrate OR glass core substrate OR TGV OR silicon photonics OR advanced packaging)'),
+    ("国外·eeNewsEurope", 'site:eenewseurope.com (silicon photonics OR CPO OR optical interconnect OR photonics OR optical transceiver)'),
     ("国外·Lightwave", 'site:lightwaveonline.com (CPO OR silicon photonics OR optical interconnect OR 1.6T OR optical transceiver)'),
     ("国外·FibreSystems", 'site:fibre-systems.com (CPO OR silicon photonics OR optical interconnect OR 1.6T OR transceiver)'),
     ("国外·OpticsPhotonicsNews", 'site:optica-opn.org (CPO OR silicon photonics OR optical interconnect OR optical I/O)'),
@@ -292,12 +307,15 @@ def is_relevant(text):
 
 A_TIER_SOURCES = [
     "DigiTimes","EE Times","Semiconductor Engineering","TechInsights","Yole",
-    "TrendForce","LightCounting","Omdia","NVIDIA","Broadcom","Intel","AMD","Marvell",
+    "TrendForce","LightCounting","Omdia","讯石光通讯","ICCSZ","optics.org","Semiconductor Today","SDxCentral",
+    "NVIDIA","Broadcom","Intel","AMD","Marvell",
     "Cisco","Coherent","Lumentum","TSMC","GlobalFoundries","Tower Semiconductor",
     "Ayar Labs","Lightmatter","Celestial AI","Ranovus","OFC","OIF","IEEE","Optica","SPIE","imec"
 ]
 B_TIER_SOURCES = [
     "The Elec","ETNews","Lightwave","Fibre Systems","Photonics Spectra",
+    "Compound Semiconductor","Laser Focus World","The Next Platform","Data Center Knowledge","Data Center Frontier",
+    "Network World","Design-Reuse","All About Circuits","Semiconductor Digest","eeNews Europe","CIOE",
     "Data Center Dynamics","ServeTheHome","SemiAnalysis","SemiWiki","Tom's Hardware",
     "TechPowerUp","AnandTech","3DInCites","IMAPS","ECTC","C114","爱集微",
     "电子工程专辑","OFweek","通信世界","通信产业网","电子发烧友","与非网","21ic","EEWorld"
