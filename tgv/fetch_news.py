@@ -17,7 +17,30 @@ TRANSLATION_ENDPOINT = "https://translate.googleapis.com/translate_a/single"
 # 监测范围：TGV + AI 高速光互联全链路。全部通过公开网站/Google News RSS发现，
 # 不依赖微信公众号，不直接硬爬高反爬站点。
 DOMESTIC_QUERIES = [
-    # 泛主题发现
+    # 泛主题发现：拆细关键词，减少超长布尔查询漏检
+    ("国内·TGV基础", 'TGV 玻璃通孔 半导体'),
+    ("国内·玻璃芯基板", '玻璃芯基板 先进封装'),
+    ("国内·玻璃中介层", '玻璃中介层 半导体'),
+    ("国内·玻璃基板封装", '玻璃基板 先进封装 半导体'),
+    ("国内·CPO基础", 'CPO 光通信'),
+    ("国内·共封装光学", '共封装光学 数据中心'),
+    ("国内·NPO", 'NPO 光通信'),
+    ("国内·LPO", 'LPO 光模块'),
+    ("国内·AI光互联基础", 'AI 光互联 数据中心'),
+    ("国内·OpticalIO", 'Optical I/O AI 光互联'),
+    ("国内·硅光基础", '硅光 数据中心'),
+    ("国内·硅光子", '硅光子 CPO'),
+    ("国内·光引擎基础", '光引擎 CPO'),
+    ("国内·800G", '800G 光模块'),
+    ("国内·1.6T", '1.6T 光模块'),
+    ("国内·3.2T", '3.2T 光模块'),
+    ("国内·InP", '磷化铟 光通信 芯片'),
+    ("国内·DFB_EML", 'DFB EML 光通信'),
+    ("国内·TFLN基础", '薄膜铌酸锂 光通信'),
+    ("国内·OCS基础", 'OCS 光交换 数据中心'),
+    ("国内·MicroLED光互联基础", 'MicroLED 光互联'),
+    ("国内·ScaleUp基础", 'Scale-up 光互联 AI'),
+    # 原有泛主题发现
     ("国内·TGV", '(TGV OR 玻璃通孔 OR 玻璃芯基板 OR 玻璃中介层) 半导体 封装'),
     ("国内·玻璃基板", '("玻璃基板" OR "玻璃芯基板" OR "玻璃中介层") (半导体 OR 先进封装)'),
     ("国内·CPO", '(CPO OR 共封装光学 OR 共封装光器件) (AI OR 算力 OR 数据中心 OR 光通信)'),
@@ -59,7 +82,27 @@ DOMESTIC_QUERIES = [
 ]
 
 FOREIGN_QUERIES = [
-    # 泛主题发现
+    # 泛主题发现：增加短查询，提升近7天命中率
+    ("国外·TGVBasic", '"through glass via" semiconductor'),
+    ("国外·GlassCoreBasic", '"glass core substrate" packaging'),
+    ("国外·GlassInterposerBasic", '"glass interposer" semiconductor'),
+    ("国外·CPOBasic", '"co-packaged optics"'),
+    ("国外·NPOBasic", '"near-packaged optics"'),
+    ("国外·LPOBasic", '"linear pluggable optics"'),
+    ("国外·OpticalInterconnectBasic", '"optical interconnect" AI'),
+    ("国外·OpticalIOBasic", '"optical I/O" AI'),
+    ("国外·SiliconPhotonicsBasic", '"silicon photonics" datacenter'),
+    ("国外·OpticalEngineBasic", '"optical engine" photonics'),
+    ("国外·800GBasic", '"800G" optical transceiver'),
+    ("国外·1.6TBasic", '"1.6T" optical transceiver'),
+    ("国外·3.2TBasic", '"3.2T" optical transceiver'),
+    ("国外·InPBasic", 'InP laser optical communications'),
+    ("国外·CWBasic", '"CW laser" CPO'),
+    ("国外·TFLNBasic", '"thin film lithium niobate" modulator'),
+    ("国外·OCSBasic", '"optical circuit switch" AI'),
+    ("国外·MicroLEDBasic", 'MicroLED optical interconnect'),
+    ("国外·ScaleUpBasic", '"scale-up" optical interconnect'),
+    # 原有泛主题发现
     ("国外·TGV", '("through-glass via" OR "glass core substrate" OR "glass interposer") semiconductor packaging'),
     ("国外·CPO", '("co-packaged optics" OR CPO) (AI OR datacenter OR networking OR silicon photonics)'),
     ("国外·NPO_LPO", '("near-packaged optics" OR "linear pluggable optics" OR NPO OR LPO) datacenter optical'),
@@ -199,7 +242,7 @@ def fetch_google(group, query, source_type, chinese=False):
     with urllib.request.urlopen(req,timeout=12) as r:
         root=ET.fromstring(r.read())
     rows=[]
-    for item in root.findall(".//item")[:80]:
+    for item in root.findall(".//item")[:100]:
         title=clean(item.findtext("title"))
         summary=clean(item.findtext("description"))
         link=(item.findtext("link") or "").strip()
@@ -216,19 +259,54 @@ def fetch_google(group, query, source_type, chinese=False):
         })
     return rows
 
+def fetch_bing_news(group, query, source_type, chinese=False):
+    market = "zh-CN" if chinese else "en-US"
+    url = "https://www.bing.com/news/search?" + urllib.parse.urlencode({
+        "q": query, "format": "rss", "setlang": market
+    })
+    req = urllib.request.Request(url, headers=HEADERS)
+    with urllib.request.urlopen(req, timeout=12) as r:
+        root = ET.fromstring(r.read())
+    rows = []
+    for item in root.findall(".//item")[:80]:
+        title = clean(item.findtext("title"))
+        summary = clean(item.findtext("description"))
+        link = (item.findtext("link") or "").strip()
+        if not title or not link:
+            continue
+        source = clean(item.findtext("source")) or group
+        if summary == title:
+            summary = ""
+        text = title + " " + summary + " " + query
+        if not is_relevant(text):
+            continue
+        rows.append({
+            "source_group": group + "·Bing",
+            "source_type": source_type,
+            "source": source,
+            "original_title": title,
+            "original_summary": summary,
+            "date": parse_date(item.findtext("pubDate") or ""),
+            "url": link,
+            "topics": topic_for(text)
+        })
+    return rows
+
 def collect():
-    jobs=[]
-    rows=[]
-    with ThreadPoolExecutor(max_workers=10) as pool:
-        for g,q in DOMESTIC_QUERIES:
-            jobs.append(pool.submit(fetch_google,g,q,"国内网站",True))
-        for g,q in FOREIGN_QUERIES:
-            jobs.append(pool.submit(fetch_google,g,q,"国外网站",False))
+    jobs = []
+    rows = []
+    with ThreadPoolExecutor(max_workers=12) as pool:
+        for g, q in DOMESTIC_QUERIES:
+            jobs.append(pool.submit(fetch_google, g, q, "国内网站", True))
+            jobs.append(pool.submit(fetch_bing_news, g, q, "国内网站", True))
+        for g, q in FOREIGN_QUERIES:
+            jobs.append(pool.submit(fetch_google, g, q, "国外网站", False))
+            jobs.append(pool.submit(fetch_bing_news, g, q, "国外网站", False))
         for f in as_completed(jobs):
             try:
                 rows.extend(f.result())
             except Exception as exc:
-                print("检索失败：",str(exc)[:120])
+                print("检索失败：", str(exc)[:120])
     return rows
 
 def load_previous():
@@ -306,7 +384,7 @@ def main():
             pass
 
     kept.sort(key=lambda x:x.get("date",""),reverse=True)
-    kept=kept[:2500]
+    kept=kept[:4000]
     tmp=DATA_FILE+".tmp"
     with open(tmp,"w",encoding="utf-8") as f:
         json.dump({
