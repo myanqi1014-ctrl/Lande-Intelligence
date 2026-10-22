@@ -204,80 +204,91 @@ def parse_date(value):
     except Exception:
         return ""
 
+def has_token(text, token):
+    return bool(re.search(r"(?<![a-z0-9])"+re.escape(token.lower())+r"(?![a-z0-9])", text.lower()))
+
 def topic_for(text):
     t=(text or "").lower()
     hits=[]
-    for topic, terms in TOPIC_TERMS.items():
-        for term in terms:
-            # Very short acronyms need token boundaries to avoid false positives.
-            if len(term) <= 4 and term.isascii() and term.replace("-","").isalnum():
-                if re.search(r"(?<![a-z0-9])"+re.escape(term)+r"(?![a-z0-9])", t):
-                    hits.append(topic); break
-            elif term in t:
-                hits.append(topic); break
-    if "光芯片/器件" in hits and not any(k in t for k in CONTEXT_TERMS):
-        hits.remove("光芯片/器件")
-    if "MicroLED光互联" in hits and not any(k in t for k in ["optical","光互联","光互连","光通信","photon"]):
-        hits.remove("MicroLED光互联")
-    return hits
+
+    # 1) TGV / glass substrate: require semiconductor/packaging context for ambiguous "TGV".
+    glass_strong=[
+        "through-glass via","through glass via","glass core substrate","glass-core substrate",
+        "glass interposer","玻璃通孔","玻璃互连孔","玻璃芯基板","玻璃中介层"
+    ]
+    if any(k in t for k in glass_strong):
+        hits.append("TGV/玻璃基板")
+    elif has_token(t,"tgv") and any(k in t for k in ["semiconductor","packaging","substrate","interposer","wafer","封装","半导体","基板","晶圆"]):
+        hits.append("TGV/玻璃基板")
+
+    # 2) CPO / NPO / LPO: acronyms alone are too ambiguous; optical context is mandatory.
+    optical_ctx=["optical","photon","silicon photonics","transceiver","光","光模块","硅光","光互联","光通信"]
+    cpo_terms=["co-packaged optics","共封装光学","共封装光器件"]
+    if any(k in t for k in cpo_terms) or (has_token(t,"cpo") and any(k in t for k in optical_ctx)):
+        hits.append("CPO/NPO/LPO")
+    elif any(k in t for k in ["near-packaged optics","linear pluggable optics","近封装光学","线性可插拔"]):
+        hits.append("CPO/NPO/LPO")
+    elif (has_token(t,"npo") or has_token(t,"lpo") or has_token(t,"lro")) and any(k in t for k in optical_ctx):
+        hits.append("CPO/NPO/LPO")
+
+    # 3) AI optical interconnect: require both optical interconnect semantics and AI/datacenter context.
+    ai_ctx=["ai","gpu","accelerator","datacenter","data center","scale-up","scale-out","算力","数据中心","gpu互联"]
+    oi_terms=["optical interconnect","optical i/o","optical io","光互联","光互连","光互連","gpu interconnect"]
+    if any(k in t for k in oi_terms) and any(k in t for k in ai_ctx):
+        hits.append("AI光互联")
+
+    # 4) Silicon photonics / optical engine.
+    if any(k in t for k in ["silicon photonics","silicon photonic","siph","硅光","硅光子","矽光","光引擎","optical engine","photonic integrated circuit"]):
+        if any(k in t for k in ["optical","photon","cpo","datacenter","data center","ai","光","数据中心","光模块"]):
+            hits.append("硅光/光引擎")
+
+    # 5) Optical chips/devices: require explicit optical communications context.
+    device_terms=["cw laser","dfb","eml","vcsel","thin film lithium niobate","tfln","磷化铟","光芯片","激光器","调制器"]
+    if any(k in t for k in device_terms) and any(k in t for k in optical_ctx+["modulator","laser","光通信"]):
+        hits.append("光芯片/器件")
+
+    # 6) High-speed optical modules: speed alone is not enough.
+    speed_terms=["800g","1.6t","3.2t","400g/lane","200g/lane"]
+    module_ctx=["optical transceiver","optical module","transceiver","光模块","光收发","光通信"]
+    if any(k in t for k in speed_terms) and any(k in t for k in module_ctx):
+        hits.append("高速光模块")
+
+    # 7) OCS: avoid generic acronym collisions.
+    if any(k in t for k in ["optical circuit switch","all-optical switching","光路交换","光电路交换","全光交换"]):
+        hits.append("OCS/光交换")
+    elif has_token(t,"ocs") and any(k in t for k in ["optical","switch","datacenter","ai","光交换","数据中心"]):
+        hits.append("OCS/光交换")
+
+    # 8) MicroLED only when used for optical interconnect/communication, not display.
+    if any(k in t for k in ["micro-led","microled"]) and any(k in t for k in ["optical interconnect","optical communication","光互联","光互连","光通信"]):
+        hits.append("MicroLED光互联")
+
+    return list(dict.fromkeys(hits))
+
+FALSE_POSITIVE_TERMS=[
+    "train à grande vitesse","high-speed train","railway","sncf","tgv inoui",
+    "microled display","micro-led display","电视","显示屏","显示技术",
+    "consumer display","smartphone display"
+]
+
+def relevance_score(text):
+    t=(text or "").lower()
+    if any(k in t for k in FALSE_POSITIVE_TERMS):
+        return 0
+    topics=topic_for(text)
+    if not topics:
+        return 0
+    score=55
+    if len(topics)>=2:
+        score+=15
+    if any(k in t for k in ["mass production","qualification","customer validation","shipment","order","量产","客户验证","订单","送样"]):
+        score+=10
+    if any(k in t for k in ["architecture","process","fabrication","prototype","demonstration","性能","工艺","原型","演示"]):
+        score+=8
+    return min(score,100)
 
 def is_relevant(text):
-    return bool(topic_for(text))
-
-A_TIER_SOURCES = [
-    "DigiTimes","EE Times","Semiconductor Engineering","TechInsights","Yole",
-    "TrendForce","LightCounting","Omdia","NVIDIA","Broadcom","Intel","AMD","Marvell",
-    "Cisco","Coherent","Lumentum","TSMC","GlobalFoundries","Tower Semiconductor",
-    "Ayar Labs","Lightmatter","Celestial AI","Ranovus","OFC","OIF","IEEE","Optica","SPIE","imec"
-]
-B_TIER_SOURCES = [
-    "The Elec","ETNews","Lightwave","Fibre Systems","Photonics Spectra",
-    "Data Center Dynamics","ServeTheHome","SemiAnalysis","SemiWiki","Tom's Hardware",
-    "TechPowerUp","AnandTech","3DInCites","IMAPS","ECTC","C114","爱集微",
-    "电子工程专辑","OFweek","通信世界","通信产业网","电子发烧友","与非网","21ic","EEWorld"
-]
-
-def source_tier(source, group=""):
-    s=(source+" "+group).lower()
-    if any(x.lower() in s for x in A_TIER_SOURCES):
-        return "A"
-    if any(x.lower() in s for x in B_TIER_SOURCES):
-        return "B"
-    return "C"
-
-def intelligence_value(text, source_grade):
-    t=(text or "").lower()
-    strong_terms=[
-        "mass production","volume production","qualification","customer validation","shipment",
-        "design win","order","capacity","pilot line","production line","partnership","launch",
-        "量产","客户验证","送样","订单","扩产","产线","投产","签约","发布","首发","突破"
-    ]
-    technical_terms=[
-        "1.6t","3.2t","200g/lane","400g/lane","cpo","co-packaged optics","optical i/o",
-        "silicon photonics","glass core substrate","through-glass via","tfln",
-        "1.6T","3.2T","CPO","硅光","玻璃芯基板","玻璃通孔","薄膜铌酸锂"
-    ]
-    strong=sum(1 for k in strong_terms if k in t)
-    tech=sum(1 for k in technical_terms if k.lower() in t)
-    score=(30 if source_grade=="A" else 18 if source_grade=="B" else 8) + strong*12 + min(tech,3)*8
-    if score >= 65:
-        return "重点情报", min(score,100)
-    if score >= 42:
-        return "值得关注", min(score,100)
-    return "一般资讯", min(score,100)
-
-def insight_fields(title, summary, category, value_level):
-    text=(title or "").strip()
-    summary=(summary or "").strip()
-    event=text if text else "暂无明确事件标题"
-    key=summary[:180] if summary else ("该条属于"+category+"，需打开原文确认核心事实与参数。")
-    if value_level=="重点情报":
-        impact="可能影响技术路线、供应链格局、客户验证或量产节奏，建议优先核验原文。"
-    elif value_level=="值得关注":
-        impact="对相关技术方向和产业进展具有参考价值，建议结合后续进展持续跟踪。"
-    else:
-        impact="作为行业背景信息参考，当前未识别到明确量产、订单或客户验证信号。"
-    return event, key, impact
+    return relevance_score(text) >= 55
 
 def classify(text):
     t=(text or "").lower()
@@ -321,14 +332,14 @@ def fetch_google(group, query, source_type, chinese=False):
         link=(item.findtext("link") or "").strip()
         source=clean(item.findtext("source")) or group
         if summary == title: summary=""
-        text=title+" "+summary+" "+query
+        text=title+" "+summary
         if not title or not link or not is_relevant(text):
             continue
         rows.append({
             "source_group":group, "source_type":source_type, "source":source,
             "original_title":title, "original_summary":summary,
             "date":parse_date(item.findtext("pubDate") or ""), "url":link,
-            "topics":topic_for(title+" "+summary+" "+query)
+            "topics":topic_for(title+" "+summary)
         })
     return rows
 
@@ -350,7 +361,7 @@ def fetch_bing_news(group, query, source_type, chinese=False):
         source = clean(item.findtext("source")) or group
         if summary == title:
             summary = ""
-        text = title + " " + summary + " " + query
+        text = title + " " + summary
         if not is_relevant(text):
             continue
         rows.append({
@@ -437,6 +448,7 @@ def main():
             "translation_status":"已翻译标题" if title != raw_title else "原文",
             "topics":r["topics"],
             "relevance_level":"核心相关",
+            "relevance_score":relevance_score(raw_title+" "+r["original_summary"]),
         })
 
     # 保留此前仍在监测范围内、且180天以内的历史记录，避免每天刷新造成归档骤减。
@@ -449,6 +461,7 @@ def main():
         if not topics:
             continue
         old["topics"]=topics
+        old["relevance_score"]=old.get("relevance_score") or relevance_score(text)
         old["source_grade"]=old.get("source_grade") or source_tier(str(old.get("source","")), str(old.get("source_group","")))
         if not old.get("value_level"):
             vl,vs=intelligence_value(text, old["source_grade"])
@@ -472,7 +485,7 @@ def main():
         except Exception:
             pass
 
-    kept.sort(key=lambda x:(x.get("value_score",0),x.get("date","")),reverse=True)
+    kept.sort(key=lambda x:(x.get("value_score",0),x.get("relevance_score",0),x.get("date","")),reverse=True)
     kept=kept[:4000]
     tmp=DATA_FILE+".tmp"
     with open(tmp,"w",encoding="utf-8") as f:
