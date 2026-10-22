@@ -363,56 +363,68 @@ def fetch(query_group, query):
     return rows
 
 
-def fetch_bing_web(query_group, query):
-    """Public Bing HTML discovery, mainly to recover indexed WeChat/public-web pages missed by Google News."""
+def fetch_bing_web(query_group, query, require_wechat=True, source_name=None):
+    """Public Bing HTML discovery. For WeChat watchlists, prefer mp.weixin.qq.com but allow public reposts/mirrors."""
     url = "https://www.bing.com/search?" + urllib.parse.urlencode({"q": query, "count": 50, "setlang": "zh-Hans"})
     request = urllib.request.Request(url, headers=HEADERS)
-    with urllib.request.urlopen(request, timeout=20) as response:
+    with urllib.request.urlopen(request, timeout=10) as response:
         page = response.read().decode("utf-8", "ignore")
     rows = []
-    # Bing result blocks: extract outbound href + visible title. Keep only public WeChat pages for these queries.
-    for m in re.finditer(r'<li class="b_algo".*?<h2[^>]*>\s*<a[^>]+href="([^"]+)"[^>]*>(.*?)</a>', page, re.I | re.S):
+    for m in re.finditer(r'<li class="b_algo".*?<h2[^>]*>\s*<a[^>]+href="([^"]+)"[^>]*>(.*?)</a>(.*?)(?=<li class="b_algo"|</ol>)', page, re.I | re.S):
         link = html.unescape(m.group(1))
         title = clean(m.group(2))
-        if "mp.weixin.qq.com" not in link or not title:
+        block = clean(m.group(3))
+        if not title or not link.startswith(("http://", "https://")):
             continue
-        text = title
-        level = relevance_level(text)
-        if not level:
-            # The query itself is tightly scoped; allow titles carrying at least one monitored technical term.
-            level = "产业链相关" if topic_for(query + " " + title) else None
+        is_wechat = "mp.weixin.qq.com" in link
+        if require_wechat and not is_wechat:
+            continue
+        searchable = title + " " + block + " " + query
+        level = relevance_level(searchable)
         if not level:
             continue
         rows.append({
-            "relevance_level": level, "source_group": query_group,
-            "original_title": title, "original_summary": "",
-            "date": "", "source": "微信公众号", "source_type": "微信/公开内容", "url": link,
+            "relevance_level": level,
+            "source_group": query_group,
+            "original_title": title,
+            "original_summary": block[:500],
+            "date": "",
+            "source": source_name or ("微信公众号" if is_wechat else "公开转载"),
+            "source_type": ("微信/重点公众号" if source_name else ("微信/公开内容" if is_wechat else "公开转载")),
+            "url": link,
         })
     return rows[:30]
 
-
 def fetch_wechat_accounts():
-    """Targeted public-web discovery for priority WeChat accounts, fetched concurrently."""
+    """Targeted discovery for priority public accounts: original WeChat first, public reposts as fallback."""
     def one(account):
-        query = f'site:mp.weixin.qq.com "{account}" (CPO OR NPO OR LPO OR 硅光 OR 光互联 OR 光互连 OR 光模块 OR 800G OR 1.6T OR TGV OR 玻璃基板 OR OCS OR TFLN OR MicroLED)'
+        topic = '(CPO OR NPO OR LPO OR 硅光 OR 光互联 OR 光互连 OR 光模块 OR 800G OR 1.6T OR TGV OR 玻璃基板 OR OCS OR TFLN OR MicroLED)'
+        original_query = f'site:mp.weixin.qq.com "{account}" {topic}'
+        mirror_query = f'"{account}" {topic}'
+        found = []
         try:
-            found = fetch_bing_web("重点公众号·" + account, query)
-            for row in found:
-                row["source"] = account
-                row["source_type"] = "微信/重点公众号"
-            return account, found
+            found.extend(fetch_bing_web("重点公众号·" + account, original_query, require_wechat=True, source_name=account))
         except Exception as exc:
-            print(f"重点公众号检索失败 [{account}]: {str(exc)[:120]}")
-            return account, []
+            print(f"公众号原文检索失败 [{account}]: {str(exc)[:100]}")
+        try:
+            mirrors = fetch_bing_web("重点公众号转载·" + account, mirror_query, require_wechat=False, source_name=account)
+            for row in mirrors:
+                if "mp.weixin.qq.com" not in row["url"]:
+                    row["source_type"] = "微信/公开转载"
+            found.extend(mirrors)
+        except Exception as exc:
+            print(f"公众号转载检索失败 [{account}]: {str(exc)[:100]}")
+        return account, found
 
     rows, seen = [], set()
-    with ThreadPoolExecutor(max_workers=6) as pool:
+    with ThreadPoolExecutor(max_workers=5) as pool:
         futures = [pool.submit(one, account) for account in WECHAT_ACCOUNTS]
         for fut in as_completed(futures):
             _, found = fut.result()
             for row in found:
-                if row["url"] not in seen:
-                    seen.add(row["url"])
+                key = row["url"]
+                if key not in seen:
+                    seen.add(key)
                     rows.append(row)
     return rows
 
@@ -486,7 +498,7 @@ def main():
             seen.add(row["url"])
             found.append(row)
 
-    web_rows, web_successes = collect_queries(WEB_QUERIES, fetch_bing_web, workers=6, label="公开网页")
+    web_rows, web_successes = collect_queries(WEB_QUERIES, lambda g,q: fetch_bing_web(g,q,require_wechat=True), workers=6, label="公开网页")
     for row in web_rows:
         if row["url"] not in seen:
             seen.add(row["url"])
