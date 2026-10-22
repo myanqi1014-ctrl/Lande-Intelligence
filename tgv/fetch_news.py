@@ -270,9 +270,9 @@ def translate_zh(text, cache):
     params = urllib.parse.urlencode({"client": "gtx", "sl": "auto", "tl": "zh-CN", "dt": "t", "q": text})
     request = urllib.request.Request(TRANSLATION_ENDPOINT + "?" + params, headers=HEADERS)
     last_error = ""
-    for attempt in range(2):
+    for attempt in range(1):
         try:
-            with urllib.request.urlopen(request, timeout=5) as response:
+            with urllib.request.urlopen(request, timeout=4) as response:
                 data = json.load(response)
             translated = "".join(part[0] for part in data[0] if part and part[0]).strip()
             if translation_is_valid(text, translated):
@@ -282,8 +282,7 @@ def translate_zh(text, cache):
             last_error = "返回内容仍未翻译"
         except Exception as exc:
             last_error = str(exc)[:100]
-        time.sleep(0.25 * (attempt + 1))
-    print(f"翻译失败，暂保留原文（下次会重试）：{last_error}")
+    print(f"翻译失败，保留原文：{last_error}")
     return text
 
 def translate_many(texts, cache, workers=3):
@@ -535,7 +534,7 @@ def main():
         source_title = row.get("original_title", "")
         source_summary = row.get("original_summary", "")[:700]
         bundles.append(source_title + SEP + source_summary)
-    translate_many(bundles, cache, workers=3)
+    translate_many(bundles, cache, workers=2)
 
     news = []
     for row in found:
@@ -568,7 +567,7 @@ def main():
             "source_type": row.get("source_type", "产业资讯"),
             "category": category_for(source_title + " " + source_summary),
             "url": row["url"],
-            "translation_status": ("已翻译为简体中文；原始语言文本后台保留" if not needs_zh_translation(title) else "翻译暂未成功，下次自动重试"),
+            "translation_status": ("已翻译为简体中文；原始语言文本后台保留" if not needs_zh_translation(title) else "翻译失败，保留原文"),
             "relevance": row["relevance_level"] + "：关键词规则初筛通过，仍需人工核验",
             "relevance_level": row["relevance_level"],
             "topics": topic_for(source_title + " " + source_summary),
