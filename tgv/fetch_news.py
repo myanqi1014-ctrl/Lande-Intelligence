@@ -8,6 +8,7 @@ import urllib.request
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 DATA_FILE = os.path.join(ROOT, "news.json")
@@ -60,7 +61,18 @@ QUERIES = [
     ("会议·ECTC", 'site:ectc.net (TGV OR "glass substrate" OR "glass core substrate" OR photonics OR "optical interconnect")'),
     ("会议·SPIE", 'site:spie.org (CPO OR "optical interconnect" OR "silicon photonics" OR "optical I/O" OR TGV)'),
     ("机构·Optica", 'site:optica.org (CPO OR NPO OR "optical interconnect" OR "silicon photonics" OR "optical I/O")'),
-    ("机构·IEEE", 'site:ieee.org (CPO OR "co-packaged optics" OR "glass core substrate" OR TGV OR "optical interconnect")')
+    ("机构·IEEE", 'site:ieee.org (CPO OR "co-packaged optics" OR "glass core substrate" OR TGV OR "optical interconnect")'),
+    ("全球英文·CPO", '"co-packaged optics" AI datacenter silicon photonics'),
+    ("全球英文·NPO_LPO", '("near-packaged optics" OR "linear pluggable optics") AI datacenter'),
+    ("全球英文·OpticalIO", '("optical I/O" OR "optical interconnect") AI GPU accelerator'),
+    ("全球英文·SiliconPhotonics", '"silicon photonics" AI datacenter optical engine'),
+    ("全球英文·OpticalEngine", '"optical engine" CPO AI datacenter'),
+    ("全球英文·Transceiver", '("800G" OR "1.6T" OR "3.2T") optical transceiver datacenter'),
+    ("全球英文·InP_Laser", '(InP OR "CW laser" OR DFB OR EML) optical interconnect CPO'),
+    ("全球英文·TFLN", '("thin film lithium niobate" OR TFLN) modulator optical interconnect'),
+    ("全球英文·OCS", '"optical circuit switch" AI datacenter'),
+    ("全球英文·GlassCore", '("glass core substrate" OR "glass interposer" OR "through-glass via") semiconductor packaging'),
+    ("全球英文·MicroLED", 'MicroLED optical interconnect optical communication')
 ]
 
 # Dedicated public-web discovery for Chinese/WeChat content. Google News alone misses most public-account pages.
@@ -199,6 +211,24 @@ def translate_zh(text, cache):
     time.sleep(0.03)
     return cache[text]
 
+def translate_many(texts, cache, workers=8):
+    """Translate unique strings concurrently to reduce workflow runtime while keeping all display text in zh-CN."""
+    pending = [t for t in dict.fromkeys(texts) if t and t not in cache]
+    if not pending:
+        return
+    def one(text):
+        local = {}
+        return text, translate_zh(text, local)
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        futures = [pool.submit(one, t) for t in pending]
+        for fut in as_completed(futures):
+            try:
+                src, dst = fut.result()
+                cache[src] = dst
+            except Exception:
+                pass
+
+
 def parse_date(value):
     try:
         return parsedate_to_datetime(value).strftime("%Y-%m-%d")
@@ -223,14 +253,17 @@ def is_relevant(text):
 def fetch(query_group, query):
     # Use an English Google News index for English/global queries so overseas sources are not suppressed
     # by the Traditional-Chinese/Taiwan edition. Chinese/WeChat queries retain the Chinese edition.
-    chinese_query = ("微信公众号" in query_group or "中文" in query_group or any("\u4e00" <= ch <= "\u9fff" for ch in query))
+    # Route by source intent, not by whether the query happens to contain Chinese terms.
+    # Mixed technical queries should default to the global English index so overseas coverage is not suppressed.
+    chinese_groups = ("TGV·中文", "微信公众号", "台湾科技媒体", "BigGo Finance")
+    chinese_query = query_group.startswith(chinese_groups)
     edition = "&hl=zh-CN&gl=TW&ceid=TW:zh-Hant" if chinese_query else "&hl=en-US&gl=US&ceid=US:en"
     url = "https://news.google.com/rss/search?q=" + urllib.parse.quote(query) + edition
     request = urllib.request.Request(url, headers=HEADERS)
     with urllib.request.urlopen(request, timeout=20) as response:
         root = ET.fromstring(response.read())
     rows = []
-    for item in root.findall(".//item")[:30]:
+    for item in root.findall(".//item")[:50]:
         original_title = clean(item.findtext("title"))
         link = (item.findtext("link") or "").strip()
         if not original_title or not link.startswith(("https://", "http://")):
@@ -376,33 +409,41 @@ def main():
         osum, tsum = item.get("original_summary"), item.get("summary")
         if ot and tt: cache[ot] = tt
         if osum and tsum and tsum != "聚合源未提供可靠摘要，请打开原文核实。": cache[osum] = tsum
+    # Translate every visible title and summary to Simplified Chinese in parallel.
+    to_translate = []
+    for row in found:
+        to_translate.append(row.get("original_title", ""))
+        if row.get("original_summary"):
+            to_translate.append(row["original_summary"][:900])
+    translate_many(to_translate, cache, workers=8)
+
     news = []
     for row in found:
         old = old_by_url.get(row["url"], {})
-        original_title = row["original_title"]
-        original_summary = row["original_summary"]
-        title = old.get("title") if old.get("original_title") == original_title else None
-        if not title:
-            title = translate_zh(original_title, cache)
-        summary = old.get("summary") if old.get("original_summary") == original_summary and old.get("summary") else None
+        source_title = row["original_title"]
+        source_summary = row["original_summary"]
+        title = cache.get(source_title) or translate_zh(source_title, cache)
+        summary = cache.get(source_summary[:900]) if source_summary else None
         if not summary:
-            summary = translate_zh(original_summary[:700], cache) if original_summary else "聚合源未提供可靠摘要，请打开原文核实。"
-        quality = classify_content(original_title + " " + original_summary)
+            summary = translate_zh(source_summary[:900], cache) if source_summary else "聚合源未提供可靠摘要，请打开原文核实。"
+        quality = classify_content(source_title + " " + source_summary)
         news.append({
             "title": title,
-            "original_title": original_title,
+            "original_title": title,
+            "source_original_title": source_title,
             "summary": summary,
-            "original_summary": original_summary,
+            "original_summary": summary,
+            "source_original_summary": source_summary,
             "date": row["date"],
             "source": row["source"],
             "source_group": row["source_group"],
             "source_type": row.get("source_type", "产业资讯"),
-            "category": category_for(original_title + " " + original_summary),
+            "category": category_for(source_title + " " + source_summary),
             "url": row["url"],
-            "translation_status": "自动翻译，建议核对原文" if title != original_title else "保留原文或无需翻译",
+            "translation_status": "已统一为简体中文；原始语言文本后台保留",
             "relevance": row["relevance_level"] + "：关键词规则初筛通过，仍需人工核验",
             "relevance_level": row["relevance_level"],
-            "topics": topic_for(original_title + " " + original_summary),
+            "topics": topic_for(source_title + " " + source_summary),
             "content_type": quality["content_type"],
             "quality_reason": quality["quality_reason"],
             "quality_score": quality["quality_score"],
@@ -427,14 +468,14 @@ def main():
             news.append(old)
             known.add(old["url"])
     news.sort(key=lambda n: n.get("date", ""), reverse=True)
-    news = news[:1000]
+    news = news[:2000]
     temp = DATA_FILE + ".tmp"
     with open(temp, "w", encoding="utf-8") as f:
         json.dump({
             "updated_at": datetime.now(timezone.utc).isoformat(),
             "source_queries_succeeded": successes + web_successes + arxiv_successes,
             "source_queries_total": len(QUERIES) + len(WEB_QUERIES) + len(ARXIV_QUERIES),
-            "search_method": "AI high-speed optical interconnect monitoring: TGV/glass substrates, CPO/NPO/LPO, silicon photonics, optical engines, optical chips/devices, high-speed transceivers, scale-up/scale-out optical I/O, OCS and MicroLED optical interconnect; Multi-channel discovery: English/Chinese Google News, dedicated public-web discovery for indexed WeChat pages, direct arXiv API, plus official company and conference/institution discovery.",
+            "search_method": "AI high-speed optical interconnect monitoring: TGV/glass substrates, CPO/NPO/LPO, silicon photonics, optical engines, optical chips/devices, high-speed transceivers, scale-up/scale-out optical I/O, OCS and MicroLED optical interconnect; Multi-channel discovery: expanded global-English and Chinese Google News queries, dedicated public-web discovery for indexed WeChat pages, direct arXiv API, plus official company and conference/institution discovery. All visible titles and summaries are normalized to Simplified Chinese while raw source-language text is retained separately.",
             "news": news
         }, f, ensure_ascii=False, indent=2)
     os.replace(temp, DATA_FILE)
