@@ -5,7 +5,7 @@ import re
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from email.utils import parsedate_to_datetime
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -473,6 +473,70 @@ def load_previous():
     except Exception:
         return []
 
+def canonical_title(title, source=""):
+    """Normalize titles for duplicate detection without destroying meaningful technical terms."""
+    t=html.unescape(title or "").strip().lower()
+    src=(source or "").strip().lower()
+    # Remove common trailing publisher/source suffixes added by aggregators.
+    for sep in [" - "," | "," – "," — ","_"]:
+        if sep in t:
+            left,right=t.rsplit(sep,1)
+            r=right.strip()
+            if (src and (r==src or r in src or src in r)) or len(r)<=24 and any(k in r for k in ["news","日报","时报","网","科技","财经","通信","半导体","光通讯","times","today"]):
+                t=left.strip()
+    # Remove bracket-like punctuation and generic breaking-news labels.
+    t=re.sub(r"^(独家|快讯|重磅|最新|breaking|exclusive)[:：\s-]*","",t,flags=re.I)
+    t=re.sub(r"[\s\-—–_|·•:：,，。.!！?？;；/\\()（）\[\]【】<>《》\"'“”‘’]+","",t)
+    return t
+
+def char_bigrams(text):
+    s=canonical_title(text)
+    if len(s)<2:
+        return {s} if s else set()
+    return {s[i:i+2] for i in range(len(s)-1)}
+
+def title_similarity(a,b):
+    ca,cb=canonical_title(a),canonical_title(b)
+    if not ca or not cb:
+        return 0.0
+    if ca==cb:
+        return 1.0
+    # One title is often the same headline plus an added source/company phrase.
+    if min(len(ca),len(cb))>=12 and (ca in cb or cb in ca):
+        return min(len(ca),len(cb))/max(len(ca),len(cb))
+    aa,bb=char_bigrams(ca),char_bigrams(cb)
+    if not aa or not bb:
+        return 0.0
+    return len(aa&bb)/len(aa|bb)
+
+def is_near_duplicate(a,b):
+    # Same-day or adjacent-day reposts of the same story are common.
+    da,db=a.get("date",""),b.get("date","")
+    if da and db:
+        try:
+            delta=abs((datetime.strptime(da,"%Y-%m-%d")-datetime.strptime(db,"%Y-%m-%d")).days)
+            if delta>1:
+                return False
+        except Exception:
+            pass
+    ca=canonical_title(a.get("original_title",""),a.get("source",""))
+    cb=canonical_title(b.get("original_title",""),b.get("source",""))
+    if ca and cb and ca==cb:
+        return True
+    sim=title_similarity(ca,cb)
+    # Higher threshold for short headlines to avoid merging distinct stories.
+    threshold=0.88 if min(len(ca),len(cb))>=18 else 0.93
+    return sim>=threshold
+
+def better_duplicate(a,b):
+    """Return the preferred record when two rows describe the same story."""
+    ga=source_tier(a.get("source",""),a.get("source_group",""))
+    gb=source_tier(b.get("source",""),b.get("source_group",""))
+    rank={"A":3,"B":2,"C":1}
+    ka=(rank.get(ga,0),len(a.get("original_summary","") or ""),len(a.get("original_title","") or ""))
+    kb=(rank.get(gb,0),len(b.get("original_summary","") or ""),len(b.get("original_title","") or ""))
+    return a if ka>=kb else b
+
 def startup_self_check():
     required = [topic_for, relevance_score, source_tier, intelligence_value, insight_fields, classify]
     if any(not callable(fn) for fn in required):
@@ -483,15 +547,38 @@ def main():
     previous=load_previous()
     rows=collect()
 
-    # URL + normalized title双重去重，减少同一新闻被多个查询重复收录。
+    # Multi-stage dedup:
+    # 1) URL duplicate; 2) canonical-title duplicate; 3) near-duplicate headline/repost.
     seen_urls=set()
-    seen_titles=set()
     dedup=[]
+    by_day={}
     for r in sorted(rows,key=lambda x:x.get("date",""),reverse=True):
-        nt=re.sub(r"[^a-z0-9\u4e00-\u9fff]+","",r["original_title"].lower())
-        if r["url"] in seen_urls or (nt and nt in seen_titles):
+        if r["url"] in seen_urls:
             continue
-        seen_urls.add(r["url"]); seen_titles.add(nt); dedup.append(r)
+        seen_urls.add(r["url"])
+        day=r.get("date","") or "unknown"
+        candidate_indexes=[]
+        for d in [day]:
+            candidate_indexes.extend(by_day.get(d,[]))
+        if day and day!="unknown":
+            try:
+                dt=datetime.strptime(day,"%Y-%m-%d")
+                for off in (-1,1):
+                    dd=(dt.replace(tzinfo=None)+timedelta(days=off)).strftime("%Y-%m-%d")
+                    candidate_indexes.extend(by_day.get(dd,[]))
+            except Exception:
+                pass
+        dup_idx=None
+        for idx in candidate_indexes:
+            if is_near_duplicate(r,dedup[idx]):
+                dup_idx=idx
+                break
+        if dup_idx is None:
+            dedup.append(r)
+            by_day.setdefault(day,[]).append(len(dedup)-1)
+        else:
+            preferred=better_duplicate(dedup[dup_idx],r)
+            dedup[dup_idx]=preferred
 
     # 翻译仅用于最近国外标题，翻译失败直接保留英文，不影响采集。
     foreign=[r for r in dedup if r["source_type"]=="国外网站"]
