@@ -40,6 +40,18 @@ header{background:#122743;color:#fff;padding:28px max(22px,calc((100% - 1120px)/
       <option value="OCS/光交换">OCS/光交换</option>
       <option value="MicroLED光互联">MicroLED光互联</option>
     </select>
+    <select id="grade">
+      <option value="">全部来源等级</option>
+      <option value="A">A级来源</option>
+      <option value="B">B级来源</option>
+      <option value="C">C级来源</option>
+    </select>
+    <select id="value">
+      <option value="">全部情报价值</option>
+      <option value="重点情报">重点情报</option>
+      <option value="值得关注">值得关注</option>
+      <option value="一般资讯">一般资讯</option>
+    </select>
     <select id="cat">
       <option value="">全部内容</option>
       <option value="技术进展">技术进展</option>
@@ -57,8 +69,8 @@ header{background:#122743;color:#fff;padding:28px max(22px,calc((100% - 1120px)/
 
   <div class="stats">
     <div class="stat"><span>当前筛选结果</span><strong id="count">—</strong></div>
-    <div class="stat"><span>国内网站</span><strong id="cnCount">—</strong></div>
-    <div class="stat"><span>国外网站</span><strong id="foreignCount">—</strong></div>
+    <div class="stat"><span>重点情报</span><strong id="keyCount">—</strong></div>
+    <div class="stat"><span>A级来源</span><strong id="aCount">—</strong></div>
   </div>
 
   <div class="layout">
@@ -97,22 +109,24 @@ function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){retur
 function safeUrl(v){try{var u=new URL(v);return ['https:','http:'].indexOf(u.protocol)>=0?u.href:''}catch(e){return ''}}
 function dayDiff(s){if(!/^\d{4}-\d{2}-\d{2}$/.test(s||''))return 99999;return (Date.now()-new Date(s+'T00:00:00Z').getTime())/86400000}
 function render(){
-  var q=$('q').value.trim().toLowerCase(),stype=$('stype').value,topic=$('topic').value,cat=$('cat').value,period=Number($('period').value);
+  var q=$('q').value.trim().toLowerCase(),stype=$('stype').value,topic=$('topic').value,grade=$('grade').value,value=$('value').value,cat=$('cat').value,period=Number($('period').value);
   var list=allNews.filter(function(n){
     var text=[n.title,n.original_title,n.summary,n.original_summary,n.source,n.source_group,n.category].join(' ').toLowerCase();
-    return (!stype||n.source_type===stype)&&(!topic||(n.topics||[]).indexOf(topic)>=0)&&(!cat||n.category===cat)&&dayDiff(n.date)<=period&&text.indexOf(q)>=0;
+    return (!stype||n.source_type===stype)&&(!topic||(n.topics||[]).indexOf(topic)>=0)&&(!grade||n.source_grade===grade)&&(!value||n.value_level===value)&&(!cat||n.category===cat)&&dayDiff(n.date)<=period&&text.indexOf(q)>=0;
   });
-  list.sort(function(a,b){return (b.date||'').localeCompare(a.date||'')});
+  list.sort(function(a,b){var dv=(b.value_score||0)-(a.value_score||0);return dv!==0?dv:(b.date||'').localeCompare(a.date||'')});
   $('count').textContent=list.length;
-  $('cnCount').textContent=list.filter(function(n){return n.source_type==='国内网站'}).length;
-  $('foreignCount').textContent=list.filter(function(n){return n.source_type==='国外网站'}).length;
+  $('keyCount').textContent=list.filter(function(n){return n.value_level==='重点情报'}).length;
+  $('aCount').textContent=list.filter(function(n){return n.source_grade==='A'}).length;
   $('list').innerHTML=list.length?list.map(function(n){
     var u=safeUrl(n.url);
     return '<article class="article">'+
-      '<div><span class="tag source">'+esc(n.source_type||'来源未分类')+'</span>'+(n.topics||[]).map(function(t){return '<span class="tag">'+esc(t)+'</span>'}).join('')+'<span class="tag">'+esc(n.category||'行业资讯')+'</span><span class="tag source">'+esc(n.source||'来源未注明')+'</span></div>'+
+      '<div><span class="tag source">'+esc(n.source_type||'来源未分类')+'</span><span class="tag">来源'+esc(n.source_grade||'C')+'级</span><span class="tag">'+esc(n.value_level||'一般资讯')+'</span>'+(n.topics||[]).map(function(t){return '<span class="tag">'+esc(t)+'</span>'}).join('')+'<span class="tag">'+esc(n.category||'行业资讯')+'</span><span class="tag source">'+esc(n.source||'来源未注明')+'</span></div>'+
       '<h3>'+esc(n.title||n.original_title)+'</h3>'+
       '<div class="meta">发布日期：'+esc(n.date||'未注明')+' · '+esc(n.translation_status||'原文')+'</div>'+
-      (n.summary?'<p>'+esc(n.summary)+'</p>':'')+
+      '<p><b>事件：</b>'+esc(n.event||n.title||n.original_title||'')+'</p>'+
+      '<p><b>关键点：</b>'+esc(n.key_point||n.summary||'暂无可靠摘要，请打开原文核验。')+'</p>'+
+      '<p><b>影响：</b>'+esc(n.impact||'建议结合原文判断其对技术路线与产业链的实际影响。')+'</p>'+
       (n.original_title&&n.original_title!==n.title?'<div class="meta">原文标题：'+esc(n.original_title)+'</div>':'')+
       (u?'<div style="margin-top:10px"><a href="'+esc(u)+'" target="_blank" rel="noopener">阅读原文 ↗</a></div>':'')+
       '</article>';
@@ -132,7 +146,7 @@ async function load(){
     $('list').innerHTML='<div class="empty">news.json 暂时无法读取，请稍后刷新。</div>';
   }
 }
-$('q').addEventListener('input',render);['stype','topic','cat','period'].forEach(function(id){$(id).addEventListener('change',render)});
+$('q').addEventListener('input',render);['stype','topic','grade','value','cat','period'].forEach(function(id){$(id).addEventListener('change',render)});
 $('refresh').addEventListener('click',load);load();
 </script>
 </body>
