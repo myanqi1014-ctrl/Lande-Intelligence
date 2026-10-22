@@ -510,21 +510,21 @@ def title_similarity(a,b):
     return len(aa&bb)/len(aa|bb)
 
 def is_near_duplicate(a,b):
-    # Same-day or adjacent-day reposts of the same story are common.
+    ca=canonical_title(a.get("original_title") or a.get("title",""),a.get("source",""))
+    cb=canonical_title(b.get("original_title") or b.get("title",""),b.get("source",""))
+    # Exact normalized headline is the same story even if a repost appears several days later.
+    if ca and cb and ca==cb:
+        return True
+    # Fuzzy matching is limited to a short repost window to avoid merging later follow-up stories.
     da,db=a.get("date",""),b.get("date","")
     if da and db:
         try:
             delta=abs((datetime.strptime(da,"%Y-%m-%d")-datetime.strptime(db,"%Y-%m-%d")).days)
-            if delta>1:
+            if delta>3:
                 return False
         except Exception:
             pass
-    ca=canonical_title(a.get("original_title",""),a.get("source",""))
-    cb=canonical_title(b.get("original_title",""),b.get("source",""))
-    if ca and cb and ca==cb:
-        return True
     sim=title_similarity(ca,cb)
-    # Higher threshold for short headlines to avoid merging distinct stories.
     threshold=0.88 if min(len(ca),len(cb))>=18 else 0.93
     return sim>=threshold
 
@@ -536,6 +536,48 @@ def better_duplicate(a,b):
     ka=(rank.get(ga,0),len(a.get("original_summary","") or ""),len(a.get("original_title","") or ""))
     kb=(rank.get(gb,0),len(b.get("original_summary","") or ""),len(b.get("original_title","") or ""))
     return a if ka>=kb else b
+
+def dedupe_archive(records):
+    """Final dedupe across newly collected + historical archive records."""
+    out=[]
+    exact_index={}
+    by_date={}
+    for r in sorted(records,key=lambda x:x.get("date",""),reverse=True):
+        canon=canonical_title(r.get("original_title") or r.get("title",""),r.get("source",""))
+        if canon and canon in exact_index:
+            idx=exact_index[canon]
+            out[idx]=better_duplicate(out[idx],r)
+            continue
+
+        candidates=[]
+        day=r.get("date","")
+        if day:
+            try:
+                dt=datetime.strptime(day,"%Y-%m-%d")
+                for off in range(-3,4):
+                    key=(dt+timedelta(days=off)).strftime("%Y-%m-%d")
+                    candidates.extend(by_date.get(key,[]))
+            except Exception:
+                candidates.extend(by_date.get(day,[]))
+
+        dup_idx=None
+        for idx in candidates:
+            if is_near_duplicate(r,out[idx]):
+                dup_idx=idx
+                break
+
+        if dup_idx is not None:
+            preferred=better_duplicate(out[dup_idx],r)
+            out[dup_idx]=preferred
+            if canon:
+                exact_index[canon]=dup_idx
+        else:
+            idx=len(out)
+            out.append(r)
+            if canon:
+                exact_index[canon]=idx
+            by_date.setdefault(day,[]).append(idx)
+    return out
 
 def startup_self_check():
     required = [topic_for, relevance_score, source_tier, intelligence_value, insight_fields, classify]
@@ -639,6 +681,10 @@ def main():
             latin=len(re.findall(r"[A-Za-z]",text))
             old["source_type"]="国内网站" if cjk >= latin*0.3 else "国外网站"
         news.append(old); known.add(old["url"])
+
+    before_final_dedupe=len(news)
+    news=dedupe_archive(news)
+    print(f"最终标题去重：{before_final_dedupe} -> {len(news)} 条")
 
     cutoff=datetime.now(timezone.utc).timestamp()-180*86400
     kept=[]
