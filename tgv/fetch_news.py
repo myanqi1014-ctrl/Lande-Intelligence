@@ -191,27 +191,48 @@ def clean(value):
     value = re.sub(r"<[^>]+>", " ", value or "")
     return re.sub(r"\s+", " ", html.unescape(value)).strip()
 
+def needs_zh_translation(text):
+    """Return True when visible text still looks predominantly non-Chinese."""
+    if not text:
+        return False
+    latin = len(re.findall(r"[A-Za-z]", text))
+    cjk = len(re.findall(r"[\u4e00-\u9fff]", text))
+    # English/Korean-source headlines frequently contain mostly Latin text.
+    return latin >= 8 and latin > cjk * 1.5
+
+def translation_is_valid(source, translated):
+    if not translated:
+        return False
+    if needs_zh_translation(source) and needs_zh_translation(translated):
+        return False
+    return translated.strip() != ""
+
 def translate_zh(text, cache):
     if not text:
         return ""
-    if text in cache:
-        return cache[text]
+    cached = cache.get(text)
+    if cached and translation_is_valid(text, cached):
+        return cached
     params = urllib.parse.urlencode({"client": "gtx", "sl": "auto", "tl": "zh-CN", "dt": "t", "q": text})
     request = urllib.request.Request(TRANSLATION_ENDPOINT + "?" + params, headers=HEADERS)
-    try:
-        with urllib.request.urlopen(request, timeout=6) as response:
-            data = json.load(response)
-        translated = "".join(part[0] for part in data[0] if part and part[0]).strip()
-        # Force Chinese display text through zh-CN conversion as well, so Traditional Chinese
-        # headlines from Taiwan/HK sources are normalized to Simplified Chinese.
-        cache[text] = translated or text
-    except Exception as exc:
-        print(f"翻译失败，保留原文：{str(exc)[:100]}")
-        cache[text] = text
-    time.sleep(0.03)
-    return cache[text]
+    last_error = ""
+    for attempt in range(3):
+        try:
+            with urllib.request.urlopen(request, timeout=10) as response:
+                data = json.load(response)
+            translated = "".join(part[0] for part in data[0] if part and part[0]).strip()
+            if translation_is_valid(text, translated):
+                cache[text] = translated
+                time.sleep(0.08)
+                return translated
+            last_error = "返回内容仍未翻译"
+        except Exception as exc:
+            last_error = str(exc)[:100]
+        time.sleep(0.6 * (attempt + 1))
+    print(f"翻译失败，暂保留原文（下次会重试）：{last_error}")
+    return text
 
-def translate_many(texts, cache, workers=8):
+def translate_many(texts, cache, workers=3):
     """Translate unique strings concurrently to reduce workflow runtime while keeping all display text in zh-CN."""
     pending = [t for t in dict.fromkeys(texts) if t and t not in cache]
     if not pending:
@@ -407,15 +428,17 @@ def main():
             continue
         ot, tt = item.get("original_title"), item.get("title")
         osum, tsum = item.get("original_summary"), item.get("summary")
-        if ot and tt: cache[ot] = tt
-        if osum and tsum and tsum != "聚合源未提供可靠摘要，请打开原文核实。": cache[osum] = tsum
+        if ot and tt and translation_is_valid(ot, tt):
+            cache[ot] = tt
+        if osum and tsum and tsum != "聚合源未提供可靠摘要，请打开原文核实。" and translation_is_valid(osum, tsum):
+            cache[osum] = tsum
     # Translate every visible title and summary to Simplified Chinese in parallel.
     to_translate = []
     for row in found:
         to_translate.append(row.get("original_title", ""))
         if row.get("original_summary"):
             to_translate.append(row["original_summary"][:900])
-    translate_many(to_translate, cache, workers=8)
+    translate_many(to_translate, cache, workers=3)
 
     news = []
     for row in found:
@@ -440,7 +463,7 @@ def main():
             "source_type": row.get("source_type", "产业资讯"),
             "category": category_for(source_title + " " + source_summary),
             "url": row["url"],
-            "translation_status": "已统一为简体中文；原始语言文本后台保留",
+            "translation_status": ("已翻译为简体中文；原始语言文本后台保留" if not needs_zh_translation(title) else "翻译暂未成功，下次自动重试"),
             "relevance": row["relevance_level"] + "：关键词规则初筛通过，仍需人工核验",
             "relevance_level": row["relevance_level"],
             "topics": topic_for(source_title + " " + source_summary),
