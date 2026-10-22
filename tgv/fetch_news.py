@@ -144,6 +144,24 @@ WECHAT_TOPIC_TERMS = [
     "MicroLED 光互联",
 ]
 
+
+# Free Sogou WeChat keyword discovery. This is the primary zero-cost WeChat channel.
+SOGOU_WECHAT_QUERIES = [
+    ("搜狗微信·CPO", "CPO 共封装光学"),
+    ("搜狗微信·NPO_LPO", "NPO LPO 光模块"),
+    ("搜狗微信·硅光", "硅光 硅光子 光引擎"),
+    ("搜狗微信·光互联", "光互联 光互连 AI 算力"),
+    ("搜狗微信·高速光模块", "800G 1.6T 3.2T 光模块"),
+    ("搜狗微信·光芯片", "InP 磷化铟 DFB EML CW激光器"),
+    ("搜狗微信·TFLN", "TFLN 薄膜铌酸锂 调制器"),
+    ("搜狗微信·TGV", "TGV 玻璃通孔 玻璃基板 玻璃芯基板"),
+    ("搜狗微信·OCS", "OCS 光交换 全光交换"),
+    ("搜狗微信·OpticalIO", "Optical I/O 光互联"),
+    ("搜狗微信·MicroLED", "MicroLED 光互联 光通信"),
+]
+
+WECHAT2RSS_LIST_URL = "https://wechat2rss.xlab.app/list/list"
+
 ARXIV_QUERIES = [
     ("arXiv·CPO光互联", 'all:"co-packaged optics" OR all:"optical interconnect" OR all:"optical I/O"'),
     ("arXiv·硅光光引擎", 'all:"silicon photonics" OR all:"optical engine"'),
@@ -428,6 +446,117 @@ def fetch_wechat_accounts():
                     rows.append(row)
     return rows
 
+
+def _decode_web_bytes(raw):
+    for enc in ("utf-8", "gb18030", "gbk"):
+        try:
+            return raw.decode(enc)
+        except Exception:
+            pass
+    return raw.decode("utf-8", "ignore")
+
+def fetch_sogou_wechat(query_group, query):
+    """Free Sogou WeChat article search. Returns article cards even when final WeChat redirect resolution is unavailable."""
+    params = urllib.parse.urlencode({"type": 2, "query": query, "ie": "utf8"})
+    url = "https://weixin.sogou.com/weixin?" + params
+    headers = dict(HEADERS)
+    headers.update({
+        "Referer": "https://weixin.sogou.com/",
+        "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+    })
+    request = urllib.request.Request(url, headers=headers)
+    with urllib.request.urlopen(request, timeout=10) as response:
+        page = _decode_web_bytes(response.read())
+
+    # Detect anti-bot/captcha pages and fail fast; the rest of the workflow continues.
+    lower = page.lower()
+    if "验证码" in page or "请输入验证码" in page or "antispider" in lower:
+        raise RuntimeError("搜狗微信触发验证码/反爬")
+
+    rows = []
+    # Current search results use li -> h3 -> a; keep regex deliberately tolerant.
+    blocks = re.findall(r"<li\b[^>]*>(.*?)</li>", page, re.I | re.S)
+    for block in blocks:
+        hm = re.search(r"<h3\b[^>]*>\s*<a\b[^>]*href=[\"']([^\"']+)[\"'][^>]*>(.*?)</a>", block, re.I | re.S)
+        if not hm:
+            continue
+        href = html.unescape(hm.group(1))
+        title = clean(hm.group(2))
+        if not title:
+            continue
+        link = urllib.parse.urljoin("https://weixin.sogou.com", href)
+        am = re.search(r"class=[\"'][^\"']*s-p[^\"']*[\"'][^>]*>(.*?)</", block, re.I | re.S)
+        account = clean(am.group(1)) if am else "微信公众号"
+        sm = re.search(r"class=[\"'][^\"']*txt-info[^\"']*[\"'][^>]*>(.*?)</", block, re.I | re.S)
+        summary = clean(sm.group(1)) if sm else ""
+        text = title + " " + summary + " " + query
+        level = relevance_level(text)
+        if not level:
+            continue
+        rows.append({
+            "relevance_level": level,
+            "source_group": query_group,
+            "original_title": title,
+            "original_summary": summary,
+            "date": "",
+            "source": account or "微信公众号",
+            "source_type": "微信/搜狗",
+            "url": link,
+        })
+    return rows[:30]
+
+def fetch_wechat2rss_watchlist():
+    """Use the free Wechat2RSS directory when any priority account is publicly available there."""
+    request = urllib.request.Request(WECHAT2RSS_LIST_URL, headers=HEADERS)
+    with urllib.request.urlopen(request, timeout=10) as response:
+        page = _decode_web_bytes(response.read())
+    rows = []
+    for account in WECHAT_ACCOUNTS:
+        # Public list entries link directly to /feed/<hash>.xml.
+        pattern = r'href=[\"\']([^\"\']*/feed/[^\"\']+\.xml)[\"\'][^>]*>\s*' + re.escape(account) + r'\s*</a>'
+        m = re.search(pattern, page, re.I | re.S)
+        if not m:
+            # Some templates put the text before/around the anchor; use a wider local search.
+            near = re.search(r'<a[^>]+href=[\"\']([^\"\']*/feed/[^\"\']+\.xml)[\"\'][^>]*>(.*?)</a>', page, re.I | re.S)
+            candidates = re.findall(r'<a[^>]+href=[\"\']([^\"\']*/feed/[^\"\']+\.xml)[\"\'][^>]*>(.*?)</a>', page, re.I | re.S)
+            feed_href = None
+            for href, label in candidates:
+                if account in clean(label):
+                    feed_href = href
+                    break
+        else:
+            feed_href = m.group(1)
+        if not feed_href:
+            continue
+        feed_url = urllib.parse.urljoin("https://wechat2rss.xlab.app", feed_href)
+        try:
+            req = urllib.request.Request(feed_url, headers=HEADERS)
+            with urllib.request.urlopen(req, timeout=10) as response:
+                root = ET.fromstring(response.read())
+            for item in root.findall(".//item")[:20]:
+                title = clean(item.findtext("title"))
+                summary = clean(item.findtext("description"))
+                link = (item.findtext("link") or "").strip()
+                if not title or not link:
+                    continue
+                text = title + " " + summary
+                level = relevance_level(text)
+                if not level:
+                    continue
+                rows.append({
+                    "relevance_level": level,
+                    "source_group": "Wechat2RSS·" + account,
+                    "original_title": title,
+                    "original_summary": summary,
+                    "date": parse_date(item.findtext("pubDate") or ""),
+                    "source": account,
+                    "source_type": "微信/RSS",
+                    "url": link,
+                })
+        except Exception as exc:
+            print(f"Wechat2RSS读取失败 [{account}]: {str(exc)[:100]}")
+    return rows
+
 def fetch_arxiv(query_group, query):
     """Direct arXiv API ingestion; independent of Google News indexing."""
     params = urllib.parse.urlencode({
@@ -503,6 +632,23 @@ def main():
         if row["url"] not in seen:
             seen.add(row["url"])
             found.append(row)
+
+    sogou_rows, sogou_successes = collect_queries(SOGOU_WECHAT_QUERIES, fetch_sogou_wechat, workers=3, label="搜狗微信")
+    for row in sogou_rows:
+        if row["url"] not in seen:
+            seen.add(row["url"])
+            found.append(row)
+
+    try:
+        rss_rows = fetch_wechat2rss_watchlist()
+    except Exception as exc:
+        rss_rows = []
+        print(f"Wechat2RSS目录读取失败: {str(exc)[:120]}")
+    for row in rss_rows:
+        if row["url"] not in seen:
+            seen.add(row["url"])
+            found.append(row)
+    print(f"Wechat2RSS：发现 {len(rss_rows)} 条相关结果")
 
     wechat_account_rows = fetch_wechat_accounts()
     wechat_account_successes = len(WECHAT_ACCOUNTS)
@@ -612,16 +758,16 @@ def main():
     with open(temp, "w", encoding="utf-8") as f:
         json.dump({
             "updated_at": datetime.now(timezone.utc).isoformat(),
-            "source_queries_succeeded": successes + web_successes + wechat_account_successes + arxiv_successes,
-            "source_queries_total": len(QUERIES) + len(WEB_QUERIES) + len(WECHAT_ACCOUNTS) + len(ARXIV_QUERIES),
-            "search_method": "AI high-speed optical interconnect monitoring: TGV/glass substrates, CPO/NPO/LPO, silicon photonics, optical engines, optical chips/devices, high-speed transceivers, scale-up/scale-out optical I/O, OCS and MicroLED optical interconnect; Multi-channel discovery: expanded global-English and Chinese Google News queries, dedicated public-web discovery for indexed WeChat pages, direct arXiv API, plus official company and conference/institution discovery. Visible titles and summaries are translated to Simplified Chinese when translation succeeds; failures fall back to the original text so collection can finish reliably.",
+            "source_queries_succeeded": successes + web_successes + sogou_successes + wechat_account_successes + arxiv_successes,
+            "source_queries_total": len(QUERIES) + len(WEB_QUERIES) + len(SOGOU_WECHAT_QUERIES) + len(WECHAT_ACCOUNTS) + len(ARXIV_QUERIES),
+            "search_method": "AI high-speed optical interconnect monitoring: TGV/glass substrates, CPO/NPO/LPO, silicon photonics, optical engines, optical chips/devices, high-speed transceivers, scale-up/scale-out optical I/O, OCS and MicroLED optical interconnect; Multi-channel discovery: expanded global-English and Chinese Google News queries, free Sogou WeChat article search, free Wechat2RSS feeds when available, public-web WeChat fallback, direct arXiv API, plus official company and conference/institution discovery. Visible titles and summaries are translated to Simplified Chinese when translation succeeds; failures fall back to the original text so collection can finish reliably.",
             "news": news
         }, f, ensure_ascii=False, indent=2)
     os.replace(temp, DATA_FILE)
     direct_count = sum(1 for n in news if n.get("relevance_level") == "核心相关")
     related_count = sum(1 for n in news if n.get("relevance_level") == "产业链相关")
     types = {name: sum(1 for n in news if n.get("content_type") == name) for name in ("技术进展", "产业化进展", "市场观察", "待核验")}
-    print(f"完成：Google News {successes}/{len(QUERIES)}；公开网页 {web_successes}/{len(WEB_QUERIES)}；重点公众号 {len(wechat_account_rows)} 条；arXiv {arxiv_successes}/{len(ARXIV_QUERIES)}；归档 {len(news)} 条；核心相关 {direct_count} 条，产业链相关 {related_count} 条。")
+    print(f"完成：Google News {successes}/{len(QUERIES)}；搜狗微信 {sogou_successes}/{len(SOGOU_WECHAT_QUERIES)}；Wechat2RSS {len(rss_rows)} 条；公开网页 {web_successes}/{len(WEB_QUERIES)}；重点公众号兜底 {len(wechat_account_rows)} 条；arXiv {arxiv_successes}/{len(ARXIV_QUERIES)}；归档 {len(news)} 条；核心相关 {direct_count} 条，产业链相关 {related_count} 条。")
     print("内容质量分类：" + "；".join(f"{k} {v} 条" for k, v in types.items()))
     print("说明：微信公众号仅能发现被公开索引的文章；未被索引、需登录或受限制的文章不会保证采集到。")
 
