@@ -270,19 +270,19 @@ def translate_zh(text, cache):
     params = urllib.parse.urlencode({"client": "gtx", "sl": "auto", "tl": "zh-CN", "dt": "t", "q": text})
     request = urllib.request.Request(TRANSLATION_ENDPOINT + "?" + params, headers=HEADERS)
     last_error = ""
-    for attempt in range(3):
+    for attempt in range(2):
         try:
-            with urllib.request.urlopen(request, timeout=10) as response:
+            with urllib.request.urlopen(request, timeout=5) as response:
                 data = json.load(response)
             translated = "".join(part[0] for part in data[0] if part and part[0]).strip()
             if translation_is_valid(text, translated):
                 cache[text] = translated
-                time.sleep(0.08)
+                time.sleep(0.02)
                 return translated
             last_error = "返回内容仍未翻译"
         except Exception as exc:
             last_error = str(exc)[:100]
-        time.sleep(0.6 * (attempt + 1))
+        time.sleep(0.25 * (attempt + 1))
     print(f"翻译失败，暂保留原文（下次会重试）：{last_error}")
     return text
 
@@ -335,7 +335,7 @@ def fetch(query_group, query):
     edition = "&hl=zh-CN&gl=TW&ceid=TW:zh-Hant" if chinese_query else "&hl=en-US&gl=US&ceid=US:en"
     url = "https://news.google.com/rss/search?q=" + urllib.parse.quote(query) + edition
     request = urllib.request.Request(url, headers=HEADERS)
-    with urllib.request.urlopen(request, timeout=20) as response:
+    with urllib.request.urlopen(request, timeout=10) as response:
         root = ET.fromstring(response.read())
     rows = []
     for item in root.findall(".//item")[:50]:
@@ -393,25 +393,29 @@ def fetch_bing_web(query_group, query):
 
 
 def fetch_wechat_accounts():
-    """Targeted public-web discovery for priority WeChat accounts."""
-    rows = []
-    seen = set()
-    for account in WECHAT_ACCOUNTS:
-        # One combined query per account keeps runtime reasonable while preserving targeted discovery.
+    """Targeted public-web discovery for priority WeChat accounts, fetched concurrently."""
+    def one(account):
         query = f'site:mp.weixin.qq.com "{account}" (CPO OR NPO OR LPO OR 硅光 OR 光互联 OR 光互连 OR 光模块 OR 800G OR 1.6T OR TGV OR 玻璃基板 OR OCS OR TFLN OR MicroLED)'
         try:
             found = fetch_bing_web("重点公众号·" + account, query)
             for row in found:
-                if row["url"] in seen:
-                    continue
-                seen.add(row["url"])
                 row["source"] = account
                 row["source_type"] = "微信/重点公众号"
-                rows.append(row)
+            return account, found
         except Exception as exc:
             print(f"重点公众号检索失败 [{account}]: {str(exc)[:120]}")
-    return rows
+            return account, []
 
+    rows, seen = [], set()
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        futures = [pool.submit(one, account) for account in WECHAT_ACCOUNTS]
+        for fut in as_completed(futures):
+            _, found = fut.result()
+            for row in found:
+                if row["url"] not in seen:
+                    seen.add(row["url"])
+                    rows.append(row)
+    return rows
 
 def fetch_arxiv(query_group, query):
     """Direct arXiv API ingestion; independent of Google News indexing."""
@@ -420,7 +424,7 @@ def fetch_arxiv(query_group, query):
         "sortBy": "submittedDate", "sortOrder": "descending"
     })
     request = urllib.request.Request("https://export.arxiv.org/api/query?" + params, headers=HEADERS)
-    with urllib.request.urlopen(request, timeout=30) as response:
+    with urllib.request.urlopen(request, timeout=15) as response:
         root = ET.fromstring(response.read())
     ns = {"a": "http://www.w3.org/2005/Atom"}
     rows = []
@@ -450,35 +454,44 @@ def load_previous():
     except (OSError, ValueError, TypeError):
         return []
 
+def collect_queries(query_pairs, fetcher, workers=8, label="检索"):
+    """Run independent source queries concurrently so one slow endpoint cannot serialize the workflow."""
+    collected = []
+    succeeded = 0
+    def one(pair):
+        group, query = pair
+        try:
+            return group, fetcher(group, query), None
+        except Exception as exc:
+            return group, [], str(exc)[:160]
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        futures = [pool.submit(one, pair) for pair in query_pairs]
+        for fut in as_completed(futures):
+            group, rows, err = fut.result()
+            if err is None:
+                succeeded += 1
+                print(f"{group} [{label}]: {len(rows)} 条相关结果")
+                collected.extend(rows)
+            else:
+                print(f"{label}失败 [{group}]: {err}")
+    return collected, succeeded
+
+
 def main():
     previous = load_previous()
     old_by_url = {n.get("url"): n for n in previous if isinstance(n, dict) and n.get("url")}
     found, seen = [], set()
-    successes = 0
-    for group, query in QUERIES:
-        try:
-            rows = fetch(group, query)
-            successes += 1
-            for row in rows:
-                url = row["url"]
-                if url not in seen:
-                    seen.add(url)
-                    found.append(row)
-            print(f"{group}: {len(rows)} 条相关结果")
-        except Exception as exc:
-            print(f"检索失败 [{group}]: {str(exc)[:160]}")
+    google_rows, successes = collect_queries(QUERIES, fetch, workers=8, label="Google News")
+    for row in google_rows:
+        if row["url"] not in seen:
+            seen.add(row["url"])
+            found.append(row)
 
-    web_successes = 0
-    for group, query in WEB_QUERIES:
-        try:
-            rows = fetch_bing_web(group, query)
-            web_successes += 1
-            for row in rows:
-                if row["url"] not in seen:
-                    seen.add(row["url"]); found.append(row)
-            print(f"{group} [公开网页]: {len(rows)} 条相关结果")
-        except Exception as exc:
-            print(f"公开网页检索失败 [{group}]: {str(exc)[:160]}")
+    web_rows, web_successes = collect_queries(WEB_QUERIES, fetch_bing_web, workers=6, label="公开网页")
+    for row in web_rows:
+        if row["url"] not in seen:
+            seen.add(row["url"])
+            found.append(row)
 
     wechat_account_rows = fetch_wechat_accounts()
     wechat_account_successes = len(WECHAT_ACCOUNTS)
@@ -488,17 +501,11 @@ def main():
             found.append(row)
     print(f"重点公众号白名单：发现 {len(wechat_account_rows)} 条公开索引结果")
 
-    arxiv_successes = 0
-    for group, query in ARXIV_QUERIES:
-        try:
-            rows = fetch_arxiv(group, query)
-            arxiv_successes += 1
-            for row in rows:
-                if row["url"] not in seen:
-                    seen.add(row["url"]); found.append(row)
-            print(f"{group} [arXiv直连]: {len(rows)} 条相关结果")
-        except Exception as exc:
-            print(f"arXiv检索失败 [{group}]: {str(exc)[:160]}")
+    arxiv_rows, arxiv_successes = collect_queries(ARXIV_QUERIES, fetch_arxiv, workers=3, label="arXiv直连")
+    for row in arxiv_rows:
+        if row["url"] not in seen:
+            seen.add(row["url"])
+            found.append(row)
 
     if not found:
         print("本次没有获取到相关新闻；保留现有数据。")
@@ -516,23 +523,37 @@ def main():
             cache[ot] = tt
         if osum and tsum and tsum != "聚合源未提供可靠摘要，请打开原文核实。" and translation_is_valid(osum, tsum):
             cache[osum] = tsum
-    # Translate every visible title and summary to Simplified Chinese in parallel.
-    to_translate = []
+        raw_t = item.get("source_original_title")
+        raw_s = item.get("source_original_summary")
+        if raw_t and item.get("title"):
+            cached_summary = item.get("summary", "")
+            cache[raw_t + "\n<<<SUMMARY>>>\n" + (raw_s or "")[:700]] = item.get("title", "") + "\n<<<SUMMARY>>>\n" + cached_summary
+    # Translate title + summary together: one request per article instead of two.
+    SEP = "\n<<<SUMMARY>>>\n"
+    bundles = []
     for row in found:
-        to_translate.append(row.get("original_title", ""))
-        if row.get("original_summary"):
-            to_translate.append(row["original_summary"][:900])
-    translate_many(to_translate, cache, workers=3)
+        source_title = row.get("original_title", "")
+        source_summary = row.get("original_summary", "")[:700]
+        bundles.append(source_title + SEP + source_summary)
+    translate_many(bundles, cache, workers=3)
 
     news = []
     for row in found:
-        old = old_by_url.get(row["url"], {})
         source_title = row["original_title"]
         source_summary = row["original_summary"]
-        title = cache.get(source_title) or translate_zh(source_title, cache)
-        summary = cache.get(source_summary[:900]) if source_summary else None
+        bundle = source_title + SEP + source_summary[:700]
+        translated_bundle = cache.get(bundle) or translate_zh(bundle, cache)
+        if SEP in translated_bundle:
+            title, summary = translated_bundle.split(SEP, 1)
+        else:
+            # Translation engines may alter whitespace but normally preserve the sentinel text.
+            parts = re.split(r"<<<SUMMARY>>>", translated_bundle, maxsplit=1)
+            title = parts[0].strip()
+            summary = parts[1].strip() if len(parts) > 1 else ""
+        if not title:
+            title = source_title
         if not summary:
-            summary = translate_zh(source_summary[:900], cache) if source_summary else "聚合源未提供可靠摘要，请打开原文核实。"
+            summary = "聚合源未提供可靠摘要，请打开原文核实。" if not source_summary else source_summary[:700]
         quality = classify_content(source_title + " " + source_summary)
         news.append({
             "title": title,
