@@ -290,6 +290,60 @@ def relevance_score(text):
 def is_relevant(text):
     return relevance_score(text) >= 55
 
+A_TIER_SOURCES = [
+    "DigiTimes","EE Times","Semiconductor Engineering","TechInsights","Yole",
+    "TrendForce","LightCounting","Omdia","NVIDIA","Broadcom","Intel","AMD","Marvell",
+    "Cisco","Coherent","Lumentum","TSMC","GlobalFoundries","Tower Semiconductor",
+    "Ayar Labs","Lightmatter","Celestial AI","Ranovus","OFC","OIF","IEEE","Optica","SPIE","imec"
+]
+B_TIER_SOURCES = [
+    "The Elec","ETNews","Lightwave","Fibre Systems","Photonics Spectra",
+    "Data Center Dynamics","ServeTheHome","SemiAnalysis","SemiWiki","Tom's Hardware",
+    "TechPowerUp","AnandTech","3DInCites","IMAPS","ECTC","C114","爱集微",
+    "电子工程专辑","OFweek","通信世界","通信产业网","电子发烧友","与非网","21ic","EEWorld"
+]
+
+def source_tier(source, group=""):
+    s=(str(source)+" "+str(group)).lower()
+    if any(x.lower() in s for x in A_TIER_SOURCES):
+        return "A"
+    if any(x.lower() in s for x in B_TIER_SOURCES):
+        return "B"
+    return "C"
+
+def intelligence_value(text, source_grade):
+    t=(text or "").lower()
+    strong_terms=[
+        "mass production","volume production","qualification","customer validation","shipment",
+        "design win","order","capacity","pilot line","production line","partnership","launch",
+        "量产","客户验证","送样","订单","扩产","产线","投产","签约","发布","首发","突破"
+    ]
+    technical_terms=[
+        "1.6t","3.2t","200g/lane","400g/lane","cpo","co-packaged optics","optical i/o",
+        "silicon photonics","glass core substrate","through-glass via","tfln",
+        "硅光","玻璃芯基板","玻璃通孔","薄膜铌酸锂"
+    ]
+    strong=sum(1 for k in strong_terms if k in t)
+    tech=sum(1 for k in technical_terms if k in t)
+    score=(30 if source_grade=="A" else 18 if source_grade=="B" else 8)+strong*12+min(tech,3)*8
+    if score>=65:
+        return "重点情报", min(score,100)
+    if score>=42:
+        return "值得关注", min(score,100)
+    return "一般资讯", min(score,100)
+
+def insight_fields(title, summary, category, value_level):
+    event=(title or "").strip() or "暂无明确事件标题"
+    summary=(summary or "").strip()
+    key=summary[:180] if summary else "该条属于"+str(category)+"，需打开原文确认核心事实与参数。"
+    if value_level=="重点情报":
+        impact="可能影响技术路线、供应链格局、客户验证或量产节奏，建议优先核验原文。"
+    elif value_level=="值得关注":
+        impact="对相关技术方向和产业进展具有参考价值，建议结合后续进展持续跟踪。"
+    else:
+        impact="作为行业背景信息参考，当前未识别到明确量产、订单或客户验证信号。"
+    return event,key,impact
+
 def classify(text):
     t=(text or "").lower()
     if any(k in t for k in ["process","fabrication","laser drilling","etching","metallization","plating","modulator","architecture","工艺","激光","蚀刻","金属化","电镀","架构","调制"]):
@@ -401,7 +455,13 @@ def load_previous():
     except Exception:
         return []
 
+def startup_self_check():
+    required = [topic_for, relevance_score, source_tier, intelligence_value, insight_fields, classify]
+    if any(not callable(fn) for fn in required):
+        raise RuntimeError("collector helper initialization failed")
+
 def main():
+    startup_self_check()
     previous=load_previous()
     rows=collect()
 
