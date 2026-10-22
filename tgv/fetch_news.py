@@ -2,7 +2,6 @@ import json
 import html
 import os
 import re
-import time
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
@@ -12,764 +11,189 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 DATA_FILE = os.path.join(ROOT, "news.json")
-HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; TGVIntelligence/1.1)"}
+HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; TGVIntelligence/2.0)"}
 TRANSLATION_ENDPOINT = "https://translate.googleapis.com/translate_a/single"
 
-# Open discovery, not a fixed publisher whitelist:
-# Google News RSS is used as a no-key public search index. Site-specific queries are supplementary.
-QUERIES = [
-    ("TGV·英文", '("through-glass via" OR "glass core substrate" OR "glass interposer" OR "TGV technology")'),
-    ("TGV·中文", '(TGV OR 玻璃通孔 OR 玻璃芯基板 OR 玻璃中介层)'),
-    ("玻璃基板·产业", '("glass substrate" OR "glass core substrate" OR 玻璃基板 OR 玻璃芯基板) (Intel OR AMD OR NVIDIA OR packaging OR 封装 OR substrate OR interposer)'),
-    ("CPO·核心", '("co-packaged optics" OR CPO) (AI OR datacenter OR optical OR silicon photonics)'),
-    ("NPO·LPO", '("near-packaged optics" OR NPO OR "linear pluggable optics" OR LPO OR LRO) (AI OR optical OR datacenter)'),
-    ("光互联·AI", '("optical interconnect" OR "optical I/O" OR "optical IO") (AI OR GPU OR accelerator OR scale-up OR scale-out)'),
-    ("硅光·光引擎", '("silicon photonics" OR SiPh OR "optical engine" OR PIC) (CPO OR NPO OR AI OR datacenter)'),
-    ("光芯片·激光器", '(InP OR "CW laser" OR DFB OR EML OR VCSEL OR modulator OR TFLN) (CPO OR NPO OR optical interconnect OR AI)'),
-    ("高速光模块", '("800G" OR "1.6T" OR "3.2T" OR "400G/lane" OR "200G/lane") (optical module OR transceiver OR 光模块 OR 光互联)'),
-    ("Scale-up·Scale-out", '("scale-up" OR "scale-out") ("optical interconnect" OR CPO OR NPO OR "optical I/O")'),
-    ("OCS·光交换", '("optical circuit switch" OR OCS OR "all-optical switching") (AI OR datacenter OR scale-up OR scale-out)'),
-    ("玻璃×CPO", '("glass substrate" OR "glass interposer" OR "glass waveguide" OR TGV) ("co-packaged optics" OR CPO)'),
-    ("MicroLED光互联", '("Micro-LED" OR microLED) ("optical interconnect" OR optical communication OR CPO)'),
-    ("微信公众号·TGV玻璃", 'site:mp.weixin.qq.com (TGV OR 玻璃通孔 OR 玻璃基板 OR 玻璃芯基板)'),
-    ("微信公众号·CPO光互联", 'site:mp.weixin.qq.com (CPO OR NPO OR LPO OR 光互联 OR 硅光 OR 光引擎) (AI OR 算力 OR 数据中心 OR 光模块)'),
-    ("微信公众号·光芯片", 'site:mp.weixin.qq.com (InP OR CW激光器 OR DFB OR EML OR TFLN OR 硅光) (CPO OR 光互联 OR 光模块)'),
-    ("台湾科技媒体", '(TGV OR 玻璃基板 OR CPO OR NPO OR LPO OR 矽光 OR 光互連) 台灣 科技'),
-    ("韩国科技媒体", '(TGV OR "glass substrate" OR CPO OR NPO OR "silicon photonics") Korea semiconductor'),
-    ("日本科技媒体", '(TGV OR "glass substrate" OR CPO OR NPO OR "silicon photonics") Japan semiconductor'),
-    ("TheElec", 'site:thelec.kr (TGV OR "glass substrate" OR CPO OR NPO OR "silicon photonics")'),
-    ("Xenospectrum", 'site:xenospectrum.com (TGV OR "glass substrate" OR CPO OR NPO OR "optical interconnect")'),
-    ("ETNews", 'site:en.etnews.com (TGV OR "glass substrate" OR CPO OR NPO OR "silicon photonics")'),
-    ("BigGo Finance", 'site:finance.biggo.com (TGV OR 玻璃基板 OR CPO OR NPO OR 矽光 OR 光互連)'),
-    ("Seoul Economic Daily", 'site:en.sedaily.com (TGV OR "glass substrate" OR CPO OR NPO OR "silicon photonics")'),
-    ("论文·专利", '("through-glass via" OR "glass core substrate" OR CPO OR NPO OR "optical I/O" OR "silicon photonics") (research OR patent OR conference OR paper)'),
-    ("arXiv·光互联预印本", 'site:arxiv.org (CPO OR "co-packaged optics" OR NPO OR "optical interconnect" OR "optical I/O" OR "silicon photonics")'),
-    ("arXiv·玻璃TGV预印本", 'site:arxiv.org ("through-glass via" OR "glass core substrate" OR "glass interposer")'),
-    ("TechRxiv·预印本", 'site:techrxiv.org (CPO OR NPO OR "optical interconnect" OR "silicon photonics" OR TGV OR "glass substrate")'),
-    ("Optica Open·预印本", 'site:opg.optica.org ("Optica Open" OR preprint) (CPO OR "optical interconnect" OR "silicon photonics" OR "optical engine" OR TGV)'),
-    ("Research Square·预印本", 'site:researchsquare.com (CPO OR "optical interconnect" OR "silicon photonics" OR photonics OR TGV)'),
-    ("官方·NVIDIA", 'site:nvidia.com (CPO OR "co-packaged optics" OR "silicon photonics" OR "optical networking" OR "optical interconnect")'),
-    ("官方·Broadcom", 'site:broadcom.com (CPO OR "co-packaged optics" OR "silicon photonics" OR "optical engine" OR LPO)'),
-    ("官方·Intel", 'site:intel.com ("glass substrate" OR "glass core substrate" OR "silicon photonics" OR "optical I/O" OR CPO)'),
-    ("官方·TSMC", 'site:tsmc.com (silicon photonics OR CPO OR COUPE OR photonics OR optical)'),
-    ("官方·Marvell", 'site:marvell.com (CPO OR "silicon photonics" OR "optical interconnect" OR "optical DSP" OR 1.6T)'),
-    ("官方·Coherent", 'site:coherent.com (CPO OR "optical engine" OR "silicon photonics" OR 1.6T OR "CW laser")'),
-    ("官方·Lumentum", 'site:lumentum.com (CPO OR "CW laser" OR "optical interconnect" OR 1.6T OR photonics)'),
-    ("官方·Cisco", 'site:cisco.com (CPO OR "silicon photonics" OR "optical interconnect" OR "co-packaged optics")'),
-    ("会议·OFC", 'site:ofcconference.org (CPO OR NPO OR "optical interconnect" OR "silicon photonics" OR "optical I/O" OR TGV)'),
-    ("会议·ECOC", '(site:ecoc2026.org OR site:ecoc.org) (CPO OR NPO OR "optical interconnect" OR "silicon photonics" OR 1.6T)'),
-    ("会议·ECTC", 'site:ectc.net (TGV OR "glass substrate" OR "glass core substrate" OR photonics OR "optical interconnect")'),
-    ("会议·SPIE", 'site:spie.org (CPO OR "optical interconnect" OR "silicon photonics" OR "optical I/O" OR TGV)'),
-    ("机构·Optica", 'site:optica.org (CPO OR NPO OR "optical interconnect" OR "silicon photonics" OR "optical I/O")'),
-    ("机构·IEEE", 'site:ieee.org (CPO OR "co-packaged optics" OR "glass core substrate" OR TGV OR "optical interconnect")'),
-    ("全球英文·CPO", '"co-packaged optics" AI datacenter silicon photonics'),
-    ("全球英文·NPO_LPO", '("near-packaged optics" OR "linear pluggable optics") AI datacenter'),
-    ("全球英文·OpticalIO", '("optical I/O" OR "optical interconnect") AI GPU accelerator'),
-    ("全球英文·SiliconPhotonics", '"silicon photonics" AI datacenter optical engine'),
-    ("全球英文·OpticalEngine", '"optical engine" CPO AI datacenter'),
-    ("全球英文·Transceiver", '("800G" OR "1.6T" OR "3.2T") optical transceiver datacenter'),
-    ("全球英文·InP_Laser", '(InP OR "CW laser" OR DFB OR EML) optical interconnect CPO'),
-    ("全球英文·TFLN", '("thin film lithium niobate" OR TFLN) modulator optical interconnect'),
-    ("全球英文·OCS", '"optical circuit switch" AI datacenter'),
-    ("全球英文·GlassCore", '("glass core substrate" OR "glass interposer" OR "through-glass via") semiconductor packaging'),
-    ("全球英文·MicroLED", 'MicroLED optical interconnect optical communication')
+# 仅保留 TGV / 玻璃通孔 / 玻璃芯基板相关检索。
+DOMESTIC_QUERIES = [
+    ("国内·TGV", '(TGV OR 玻璃通孔 OR 玻璃互连孔 OR 玻璃芯基板 OR 玻璃中介层) 半导体 封装'),
+    ("国内·玻璃基板", '("玻璃芯基板" OR "玻璃基板" OR "玻璃中介层") 半导体 先进封装'),
+    ("国内·TGV工艺", '(TGV OR 玻璃通孔) (激光 OR 蚀刻 OR 金属化 OR 填孔 OR 电镀 OR 工艺)'),
+    ("国内·TGV产业", '(TGV OR 玻璃芯基板) (量产 OR 产线 OR 设备 OR 客户 OR 投资 OR 封装)'),
+    ("国内·半导体行业观察", 'site:semiinsights.com (TGV OR 玻璃通孔 OR 玻璃芯基板)'),
+    ("国内·爱集微", 'site:ijiwei.com (TGV OR 玻璃通孔 OR 玻璃芯基板 OR 玻璃基板)'),
+    ("国内·电子工程专辑", 'site:eet-china.com (TGV OR 玻璃通孔 OR 玻璃芯基板)'),
+    ("国内·芯智讯", 'site:icsmart.cn (TGV OR 玻璃通孔 OR 玻璃芯基板)'),
+    ("国内·OFweek", 'site:ofweek.com (TGV OR 玻璃通孔 OR 玻璃芯基板)'),
 ]
 
-# Dedicated public-web discovery for Chinese/WeChat content. Google News alone misses most public-account pages.
-WEB_QUERIES = [
-    ("微信公众号·CPO", 'site:mp.weixin.qq.com CPO 共封装光学'),
-    ("微信公众号·NPO_LPO", 'site:mp.weixin.qq.com NPO LPO 光模块'),
-    ("微信公众号·硅光", 'site:mp.weixin.qq.com 硅光 硅光子 光引擎'),
-    ("微信公众号·光互联", 'site:mp.weixin.qq.com 光互联 光互连 AI 算力'),
-    ("微信公众号·高速光模块", 'site:mp.weixin.qq.com 800G 1.6T 光模块'),
-    ("微信公众号·光芯片", 'site:mp.weixin.qq.com 磷化铟 InP DFB EML CW激光器'),
-    ("微信公众号·TFLN", 'site:mp.weixin.qq.com TFLN 薄膜铌酸锂 调制器'),
-    ("微信公众号·TGV", 'site:mp.weixin.qq.com TGV 玻璃通孔 玻璃基板 玻璃芯基板'),
-    ("微信公众号·OCS", 'site:mp.weixin.qq.com OCS 光交换 全光交换'),
-    ("微信公众号·OpticalIO", 'site:mp.weixin.qq.com Optical I/O 光互联'),
-    ("微信公众号·MicroLED", 'site:mp.weixin.qq.com MicroLED 光互联 光通信'),
+FOREIGN_QUERIES = [
+    ("国外·TGV", '("through-glass via" OR "through glass via") semiconductor packaging'),
+    ("国外·GlassCore", '("glass core substrate" OR "glass-core substrate") semiconductor packaging'),
+    ("国外·GlassInterposer", '("glass interposer" OR "glass substrate") (semiconductor OR packaging OR interconnect)'),
+    ("国外·TGVProcess", '("through-glass via" OR "glass core substrate") (laser drilling OR etching OR metallization OR plating OR fabrication)'),
+    ("国外·TGVIndustry", '("through-glass via" OR "glass core substrate") (production OR qualification OR investment OR capacity OR customer)'),
+    ("国外·IEEE", 'site:ieee.org ("through-glass via" OR "glass core substrate")'),
+    ("国外·IMAPS", 'site:imaps.org ("through-glass via" OR "glass core substrate" OR "glass interposer")'),
+    ("国外·ECTC", 'site:ectc.net ("through-glass via" OR "glass core substrate" OR "glass interposer")'),
+    ("国外·TheElec", 'site:thelec.net ("glass substrate" OR "glass core substrate" OR TGV) semiconductor'),
+    ("国外·SemiconductorEngineering", 'site:semiengineering.com ("glass substrate" OR "glass core substrate" OR "through-glass via")'),
 ]
 
-
-# Priority WeChat/public-account watchlist. These are searched by account name + topic terms
-# through public web indexing. This improves precision but still cannot equal WeChat Search coverage.
-WECHAT_ACCOUNTS = [
-    # 行业媒体 / 产业资讯
-    "讯石光通讯",
-    "ICC讯石",
-    "光通信女人",
-    "C114通信网",
-    "光电汇OESHOW",
-    "中国电子报",
-    "半导体行业观察",
-    "芯智讯",
-    "全球半导体观察",
-    "TrendForce集邦咨询",
-    "LEDinside",
-    "电子工程专辑",
-    "爱集微",
-    "芯东西",
-    "光纤在线",
-
-    # 券商 / 产业研究
-    "国盛通信",
-    "中信建投通信",
-    "天风通信",
-    "华西通信",
-    "申万通信",
-
-    # 企业官方
-    "中际旭创",
-    "新易盛",
-    "光迅科技",
-    "华工科技",
-    "天孚通信",
-    "源杰科技",
-    "长光华芯",
-    "仕佳光子",
-    "光库科技",
-    "博创科技",
+STRONG_TERMS = [
+    "through-glass via", "through glass via", "through glass vias", "glass core substrate",
+    "glass-core substrate", "glass interposer", "玻璃通孔", "玻璃互连孔", "玻璃芯基板", "玻璃中介层"
 ]
-
-WECHAT_TOPIC_TERMS = [
-    "CPO 共封装光学",
-    "NPO LPO",
-    "硅光 硅光子 光引擎",
-    "光互联 光互连 Optical I/O",
-    "800G 1.6T 3.2T 光模块",
-    "InP 磷化铟 CW激光器 DFB EML",
-    "TFLN 薄膜铌酸锂",
-    "TGV 玻璃通孔 玻璃基板 玻璃芯基板",
-    "OCS 光交换",
-    "MicroLED 光互联",
+TGV_CONTEXT = [
+    "semiconductor", "packaging", "package", "substrate", "interposer", "wafer", "via",
+    "半导体", "封装", "基板", "中介层", "晶圆", "通孔", "芯片"
 ]
-
-
-# Free Sogou WeChat keyword discovery. This is the primary zero-cost WeChat channel.
-SOGOU_WECHAT_QUERIES = [
-    ("搜狗微信·CPO", "CPO 共封装光学"),
-    ("搜狗微信·NPO_LPO", "NPO LPO 光模块"),
-    ("搜狗微信·硅光", "硅光 硅光子 光引擎"),
-    ("搜狗微信·光互联", "光互联 光互连 AI 算力"),
-    ("搜狗微信·高速光模块", "800G 1.6T 3.2T 光模块"),
-    ("搜狗微信·光芯片", "InP 磷化铟 DFB EML CW激光器"),
-    ("搜狗微信·TFLN", "TFLN 薄膜铌酸锂 调制器"),
-    ("搜狗微信·TGV", "TGV 玻璃通孔 玻璃基板 玻璃芯基板"),
-    ("搜狗微信·OCS", "OCS 光交换 全光交换"),
-    ("搜狗微信·OpticalIO", "Optical I/O 光互联"),
-    ("搜狗微信·MicroLED", "MicroLED 光互联 光通信"),
-]
-
-WECHAT2RSS_LIST_URL = "https://wechat2rss.xlab.app/list/list"
-
-ARXIV_QUERIES = [
-    ("arXiv·CPO光互联", 'all:"co-packaged optics" OR all:"optical interconnect" OR all:"optical I/O"'),
-    ("arXiv·硅光光引擎", 'all:"silicon photonics" OR all:"optical engine"'),
-    ("arXiv·高速光模块", 'all:"1.6T" OR all:"800G" OR all:"optical transceiver"'),
-    ("arXiv·玻璃TGV", 'all:"through-glass via" OR all:"glass core substrate" OR all:"glass interposer"'),
-    ("arXiv·光芯片器件", 'all:"thin film lithium niobate" OR all:"CW laser" OR all:"InP laser"'),
-]
-
-TOPIC_TERMS = {
-    "TGV/玻璃基板": ["through-glass via","through glass via","glass via","tgv technology","tgv process","玻璃通孔","玻璃芯基板","glass core substrate","glass interposer","玻璃中介层"],
-    "CPO/NPO/LPO": ["co-packaged optics","cpo","near-packaged optics","npo","linear pluggable optics","lpo","lro","obo","xpo"],
-    "AI光互联": ["optical interconnect","optical i/o","optical io","光互联","光互連","scale-up","scale-out","gpu interconnect"],
-    "硅光/光引擎": ["silicon photonics","silicon photonic","siph","optical engine","photonic integrated circuit","pic","硅光","矽光","光引擎"],
-    "光芯片/器件": ["inp","cw laser","dfb","eml","vcsel","tfln","thin-film lithium niobate","modulator","光芯片","激光器","調制器","调制器"],
-    "高速光模块": ["800g","1.6t","3.2t","400g/lane","200g/lane","optical transceiver","optical module","光模块"],
-    "OCS/光交换": ["optical circuit switch","all-optical switching","ocs","光交换","全光交换"],
-    "MicroLED光互联": ["micro-led","microled"],
-}
-CONTEXT_TERMS = ["ai","artificial intelligence","datacenter","data center","gpu","accelerator","switch","ethernet","scale-up","scale-out","optical","photon","光","算力","数据中心","交換機","交换机","半导体","semiconductor","packaging","封装"]
-
-def topic_for(text):
-    t = text.lower()
-    hits = []
-    for topic, terms in TOPIC_TERMS.items():
-        if any(term in t for term in terms):
-            hits.append(topic)
-    # Avoid generic acronym collisions: weak device terms require optical/AI context.
-    if hits and ("光芯片/器件" not in hits or any(k in t for k in CONTEXT_TERMS)):
-        return hits
-    return []
-
-def relevance_level(text):
-    topics = topic_for(text)
-    if not topics:
-        return None
-    t = text.lower()
-    strong = any(k in t for k in ["through-glass via","glass core substrate","co-packaged optics","near-packaged optics","optical interconnect","optical i/o","silicon photonics","玻璃通孔","玻璃芯基板","光互联","硅光"])
-    return "核心相关" if strong else "产业链相关"
-
-def is_relevant(text):
-    return relevance_level(text) is not None
-
-def classify_content(text):
-    """Classify AI high-speed optical-interconnect articles by evidence type."""
-    t = text.lower()
-    technical_terms = [
-        "process", "fabrication", "laser drilling", "laser ablation",
-        "metallization", "copper plating", "via filling", "via formation",
-        "aspect ratio", "pitch", "diameter", "yield", "reliability",
-        "warpage", "crack", "roughness", "electrical performance",
-        "工艺", "制程", "激光钻孔", "激光改质", "金属化", "镀铜",
-        "填孔", "孔径", "深宽比", "良率", "可靠性", "翘曲", "裂纹",
-        "技术难点", "性能指标", "实验", "验证结果",
-    ]
-    industrial_terms = [
-        "mass production", "production line", "pilot line", "qualification",
-        "customer validation", "shipment", "capacity", "equipment order",
-        "factory", "plant", "investment", "合作备忘录", "客户验证",
-        "送样", "认证", "量产", "试产", "产线", "扩产", "设备采购",
-        "建厂", "投产", "产能", "订单", "签约", "合作",
-    ]
-    market_terms = [
-        "market size", "cagr", "market forecast", "market outlook",
-        "investment opportunity", "market opportunity", "industry report",
-        "market research", "市场规模", "复合年增长率", "市场预测",
-        "投资机会", "行业报告", "市场展望", "产业爆发",
-    ]
-    technical_hits = [k for k in technical_terms if k in t]
-    industrial_hits = [k for k in industrial_terms if k in t]
-    market_hits = [k for k in market_terms if k in t]
-
-    # Prefer concrete technical evidence, then verifiable industrial milestones.
-    if technical_hits:
-        return {
-            "content_type": "技术进展",
-            "quality_reason": "命中具体工艺、性能、可靠性或技术验证词：" + "、".join(technical_hits[:3]),
-            "quality_score": min(95, 65 + 5 * len(technical_hits)),
-        }
-    if industrial_hits and not (market_hits and len(industrial_hits) == 1):
-        return {
-            "content_type": "产业化进展",
-            "quality_reason": "命中产线、试产、客户验证、设备、订单或量产等进展词：" + "、".join(industrial_hits[:3]),
-            "quality_score": min(90, 60 + 5 * len(industrial_hits)),
-        }
-    if market_hits:
-        return {
-            "content_type": "市场观察",
-            "quality_reason": "以市场规模、预测或投资机会为主，缺少明确技术/量产证据",
-            "quality_score": 35,
-        }
-    return {
-        "content_type": "待核验",
-        "quality_reason": "标题/摘要与监测主题相关，但暂未识别到明确技术指标或产业化里程碑",
-        "quality_score": 45,
-    }
-
 
 def clean(value):
     value = re.sub(r"<[^>]+>", " ", value or "")
     return re.sub(r"\s+", " ", html.unescape(value)).strip()
 
-def needs_zh_translation(text):
-    """Return True when visible text still looks predominantly non-Chinese."""
-    if not text:
-        return False
-    latin = len(re.findall(r"[A-Za-z]", text))
-    cjk = len(re.findall(r"[\u4e00-\u9fff]", text))
-    # English/Korean-source headlines frequently contain mostly Latin text.
-    return latin >= 8 and latin > cjk * 1.5
-
-def translation_is_valid(source, translated):
-    if not translated:
-        return False
-    if needs_zh_translation(source) and needs_zh_translation(translated):
-        return False
-    return translated.strip() != ""
-
-def translate_zh(text, cache):
-    if not text:
-        return ""
-    cached = cache.get(text)
-    if cached and translation_is_valid(text, cached):
-        return cached
-    params = urllib.parse.urlencode({"client": "gtx", "sl": "auto", "tl": "zh-CN", "dt": "t", "q": text})
-    request = urllib.request.Request(TRANSLATION_ENDPOINT + "?" + params, headers=HEADERS)
-    last_error = ""
-    for attempt in range(1):
-        try:
-            with urllib.request.urlopen(request, timeout=4) as response:
-                data = json.load(response)
-            translated = "".join(part[0] for part in data[0] if part and part[0]).strip()
-            if translation_is_valid(text, translated):
-                cache[text] = translated
-                time.sleep(0.02)
-                return translated
-            last_error = "返回内容仍未翻译"
-        except Exception as exc:
-            last_error = str(exc)[:100]
-    print(f"翻译失败，保留原文：{last_error}")
-    return text
-
-def translate_many(texts, cache, workers=3):
-    """Translate unique strings concurrently to reduce workflow runtime while keeping all display text in zh-CN."""
-    pending = [t for t in dict.fromkeys(texts) if t and t not in cache]
-    if not pending:
-        return
-    def one(text):
-        local = {}
-        return text, translate_zh(text, local)
-    with ThreadPoolExecutor(max_workers=workers) as pool:
-        futures = [pool.submit(one, t) for t in pending]
-        for fut in as_completed(futures):
-            try:
-                src, dst = fut.result()
-                cache[src] = dst
-            except Exception:
-                pass
-
-
 def parse_date(value):
     try:
         return parsedate_to_datetime(value).strftime("%Y-%m-%d")
-    except (ValueError, TypeError, OverflowError):
+    except Exception:
         return ""
 
-def category_for(text):
-    t = text.lower()
-    if any(k in t for k in ("patent", "论文", "research", "研究", "专利", "university", "journal")):
-        return "研发与专利"
-    if any(k in t for k in ("equipment", "laser", "drilling", "metallization", "设备", "工艺", "加工", "镀铜")):
-        return "设备与工艺"
-    if any(k in t for k in ("investment", "funding", "capacity", "fab", "plant", "mass production", "量产", "投资", "产线", "扩产", "融资")):
-        return "产业化与投资"
-    if any(k in t for k in ("company", "announces", "launch", "supplier", "企业", "公司", "发布", "供应商")):
-        return "企业动态"
-    return "技术与市场"
+def is_tgv_relevant(text):
+    t = (text or "").lower()
+    if any(term in t for term in STRONG_TERMS):
+        return True
+    # 单独出现 TGV 时必须同时具备半导体/封装上下文，避免法国高速列车误报。
+    return bool(re.search(r"\btgv\b", t)) and any(k in t for k in TGV_CONTEXT)
 
-def is_relevant(text):
-    return relevance_level(text) is not None
+def classify(text):
+    t=(text or "").lower()
+    if any(k in t for k in ["laser drilling","etching","metallization","plating","fabrication","工艺","激光","蚀刻","金属化","电镀","填孔"]):
+        return "工艺技术"
+    if any(k in t for k in ["production","capacity","investment","qualification","customer","量产","产线","扩产","投资","客户验证"]):
+        return "产业进展"
+    if any(k in t for k in ["patent","research","paper","conference","论文","专利","研究"]):
+        return "研发/论文"
+    return "综合资讯"
 
-def fetch(query_group, query):
-    # Use an English Google News index for English/global queries so overseas sources are not suppressed
-    # by the Traditional-Chinese/Taiwan edition. Chinese/WeChat queries retain the Chinese edition.
-    # Route by source intent, not by whether the query happens to contain Chinese terms.
-    # Mixed technical queries should default to the global English index so overseas coverage is not suppressed.
-    chinese_groups = ("TGV·中文", "微信公众号", "台湾科技媒体", "BigGo Finance")
-    chinese_query = query_group.startswith(chinese_groups)
-    edition = "&hl=zh-CN&gl=TW&ceid=TW:zh-Hant" if chinese_query else "&hl=en-US&gl=US&ceid=US:en"
-    url = "https://news.google.com/rss/search?q=" + urllib.parse.quote(query) + edition
-    request = urllib.request.Request(url, headers=HEADERS)
-    with urllib.request.urlopen(request, timeout=10) as response:
-        root = ET.fromstring(response.read())
-    rows = []
-    for item in root.findall(".//item")[:50]:
-        original_title = clean(item.findtext("title"))
-        link = (item.findtext("link") or "").strip()
-        if not original_title or not link.startswith(("https://", "http://")):
-            continue
-        source = clean(item.findtext("source")) or query_group
-        summary = clean(item.findtext("description"))
-        if summary == original_title or len(summary) < 35:
-            summary = ""
-        text = original_title + " " + summary
-        level = relevance_level(text)
-        if not level:
-            continue
-        rows.append({
-            "relevance_level": level,
-            "source_group": query_group,
-            "original_title": original_title,
-            "original_summary": summary,
-            "date": parse_date(item.findtext("pubDate") or ""),
-            "source": source,
-            "source_type": ("预印本" if any(k in query_group for k in ("arXiv", "TechRxiv", "Optica Open", "Research Square")) else ("企业官方" if query_group.startswith("官方·") else ("会议/机构" if query_group.startswith(("会议·", "机构·")) else "产业资讯"))),
-            "url": link,
-        })
-    return rows
+def needs_translation(text):
+    if not text: return False
+    latin=len(re.findall(r"[A-Za-z]",text))
+    cjk=len(re.findall(r"[\u4e00-\u9fff]",text))
+    return latin >= 8 and latin > cjk * 1.5
 
-
-def fetch_bing_web(query_group, query, require_wechat=True, source_name=None):
-    """Public Bing HTML discovery. For WeChat watchlists, prefer mp.weixin.qq.com but allow public reposts/mirrors."""
-    url = "https://www.bing.com/search?" + urllib.parse.urlencode({"q": query, "count": 50, "setlang": "zh-Hans"})
-    request = urllib.request.Request(url, headers=HEADERS)
-    with urllib.request.urlopen(request, timeout=10) as response:
-        page = response.read().decode("utf-8", "ignore")
-    rows = []
-    for m in re.finditer(r'<li class="b_algo".*?<h2[^>]*>\s*<a[^>]+href="([^"]+)"[^>]*>(.*?)</a>(.*?)(?=<li class="b_algo"|</ol>)', page, re.I | re.S):
-        link = html.unescape(m.group(1))
-        title = clean(m.group(2))
-        block = clean(m.group(3))
-        if not title or not link.startswith(("http://", "https://")):
-            continue
-        is_wechat = "mp.weixin.qq.com" in link
-        if require_wechat and not is_wechat:
-            continue
-        searchable = title + " " + block + " " + query
-        level = relevance_level(searchable)
-        if not level:
-            continue
-        rows.append({
-            "relevance_level": level,
-            "source_group": query_group,
-            "original_title": title,
-            "original_summary": block[:500],
-            "date": "",
-            "source": source_name or ("微信公众号" if is_wechat else "公开转载"),
-            "source_type": ("微信/重点公众号" if source_name else ("微信/公开内容" if is_wechat else "公开转载")),
-            "url": link,
-        })
-    return rows[:30]
-
-def fetch_wechat_accounts():
-    """Targeted discovery for priority public accounts: original WeChat first, public reposts as fallback."""
-    def one(account):
-        topic = '(CPO OR NPO OR LPO OR 硅光 OR 光互联 OR 光互连 OR 光模块 OR 800G OR 1.6T OR TGV OR 玻璃基板 OR OCS OR TFLN OR MicroLED)'
-        original_query = f'site:mp.weixin.qq.com "{account}" {topic}'
-        mirror_query = f'"{account}" {topic}'
-        found = []
-        try:
-            found.extend(fetch_bing_web("重点公众号·" + account, original_query, require_wechat=True, source_name=account))
-        except Exception as exc:
-            print(f"公众号原文检索失败 [{account}]: {str(exc)[:100]}")
-        try:
-            mirrors = fetch_bing_web("重点公众号转载·" + account, mirror_query, require_wechat=False, source_name=account)
-            for row in mirrors:
-                if "mp.weixin.qq.com" not in row["url"]:
-                    row["source_type"] = "微信/公开转载"
-            found.extend(mirrors)
-        except Exception as exc:
-            print(f"公众号转载检索失败 [{account}]: {str(exc)[:100]}")
-        return account, found
-
-    rows, seen = [], set()
-    with ThreadPoolExecutor(max_workers=5) as pool:
-        futures = [pool.submit(one, account) for account in WECHAT_ACCOUNTS]
-        for fut in as_completed(futures):
-            _, found = fut.result()
-            for row in found:
-                key = row["url"]
-                if key not in seen:
-                    seen.add(key)
-                    rows.append(row)
-    return rows
-
-
-def _decode_web_bytes(raw):
-    for enc in ("utf-8", "gb18030", "gbk"):
-        try:
-            return raw.decode(enc)
-        except Exception:
-            pass
-    return raw.decode("utf-8", "ignore")
-
-def fetch_sogou_wechat(query_group, query):
-    """Free Sogou WeChat article search. Returns article cards even when final WeChat redirect resolution is unavailable."""
-    params = urllib.parse.urlencode({"type": 2, "query": query, "ie": "utf8"})
-    url = "https://weixin.sogou.com/weixin?" + params
-    headers = dict(HEADERS)
-    headers.update({
-        "Referer": "https://weixin.sogou.com/",
-        "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
-    })
-    request = urllib.request.Request(url, headers=headers)
-    with urllib.request.urlopen(request, timeout=10) as response:
-        page = _decode_web_bytes(response.read())
-
-    # Detect anti-bot/captcha pages and fail fast; the rest of the workflow continues.
-    lower = page.lower()
-    if "验证码" in page or "请输入验证码" in page or "antispider" in lower:
-        raise RuntimeError("搜狗微信触发验证码/反爬")
-
-    rows = []
-    # Current search results use li -> h3 -> a; keep regex deliberately tolerant.
-    blocks = re.findall(r"<li\b[^>]*>(.*?)</li>", page, re.I | re.S)
-    for block in blocks:
-        hm = re.search(r"<h3\b[^>]*>\s*<a\b[^>]*href=[\"']([^\"']+)[\"'][^>]*>(.*?)</a>", block, re.I | re.S)
-        if not hm:
-            continue
-        href = html.unescape(hm.group(1))
-        title = clean(hm.group(2))
-        if not title:
-            continue
-        link = urllib.parse.urljoin("https://weixin.sogou.com", href)
-        am = re.search(r"class=[\"'][^\"']*s-p[^\"']*[\"'][^>]*>(.*?)</", block, re.I | re.S)
-        account = clean(am.group(1)) if am else "微信公众号"
-        sm = re.search(r"class=[\"'][^\"']*txt-info[^\"']*[\"'][^>]*>(.*?)</", block, re.I | re.S)
-        summary = clean(sm.group(1)) if sm else ""
-        text = title + " " + summary + " " + query
-        level = relevance_level(text)
-        if not level:
-            continue
-        rows.append({
-            "relevance_level": level,
-            "source_group": query_group,
-            "original_title": title,
-            "original_summary": summary,
-            "date": "",
-            "source": account or "微信公众号",
-            "source_type": "微信/搜狗",
-            "url": link,
-        })
-    return rows[:30]
-
-def fetch_wechat2rss_watchlist():
-    """Use the free Wechat2RSS directory when any priority account is publicly available there."""
-    request = urllib.request.Request(WECHAT2RSS_LIST_URL, headers=HEADERS)
-    with urllib.request.urlopen(request, timeout=10) as response:
-        page = _decode_web_bytes(response.read())
-    rows = []
-    for account in WECHAT_ACCOUNTS:
-        # Public list entries link directly to /feed/<hash>.xml.
-        pattern = r'href=[\"\']([^\"\']*/feed/[^\"\']+\.xml)[\"\'][^>]*>\s*' + re.escape(account) + r'\s*</a>'
-        m = re.search(pattern, page, re.I | re.S)
-        if not m:
-            # Some templates put the text before/around the anchor; use a wider local search.
-            near = re.search(r'<a[^>]+href=[\"\']([^\"\']*/feed/[^\"\']+\.xml)[\"\'][^>]*>(.*?)</a>', page, re.I | re.S)
-            candidates = re.findall(r'<a[^>]+href=[\"\']([^\"\']*/feed/[^\"\']+\.xml)[\"\'][^>]*>(.*?)</a>', page, re.I | re.S)
-            feed_href = None
-            for href, label in candidates:
-                if account in clean(label):
-                    feed_href = href
-                    break
-        else:
-            feed_href = m.group(1)
-        if not feed_href:
-            continue
-        feed_url = urllib.parse.urljoin("https://wechat2rss.xlab.app", feed_href)
-        try:
-            req = urllib.request.Request(feed_url, headers=HEADERS)
-            with urllib.request.urlopen(req, timeout=10) as response:
-                root = ET.fromstring(response.read())
-            for item in root.findall(".//item")[:20]:
-                title = clean(item.findtext("title"))
-                summary = clean(item.findtext("description"))
-                link = (item.findtext("link") or "").strip()
-                if not title or not link:
-                    continue
-                text = title + " " + summary
-                level = relevance_level(text)
-                if not level:
-                    continue
-                rows.append({
-                    "relevance_level": level,
-                    "source_group": "Wechat2RSS·" + account,
-                    "original_title": title,
-                    "original_summary": summary,
-                    "date": parse_date(item.findtext("pubDate") or ""),
-                    "source": account,
-                    "source_type": "微信/RSS",
-                    "url": link,
-                })
-        except Exception as exc:
-            print(f"Wechat2RSS读取失败 [{account}]: {str(exc)[:100]}")
-    return rows
-
-def fetch_arxiv(query_group, query):
-    """Direct arXiv API ingestion; independent of Google News indexing."""
-    params = urllib.parse.urlencode({
-        "search_query": query, "start": 0, "max_results": 30,
-        "sortBy": "submittedDate", "sortOrder": "descending"
-    })
-    request = urllib.request.Request("https://export.arxiv.org/api/query?" + params, headers=HEADERS)
-    with urllib.request.urlopen(request, timeout=15) as response:
-        root = ET.fromstring(response.read())
-    ns = {"a": "http://www.w3.org/2005/Atom"}
-    rows = []
-    for entry in root.findall("a:entry", ns):
-        title = clean(entry.findtext("a:title", default="", namespaces=ns))
-        summary = clean(entry.findtext("a:summary", default="", namespaces=ns))
-        link = entry.findtext("a:id", default="", namespaces=ns).strip()
-        published = entry.findtext("a:published", default="", namespaces=ns)
-        if not title or not link:
-            continue
-        text = title + " " + summary
-        level = relevance_level(text)
-        if not level:
-            continue
-        rows.append({
-            "relevance_level": level, "source_group": query_group,
-            "original_title": title, "original_summary": summary,
-            "date": published[:10], "source": "arXiv", "source_type": "预印本", "url": link,
-        })
-    return rows
-
-def load_previous():
+def translate_zh(text):
+    if not text or not needs_translation(text):
+        return text
     try:
-        with open(DATA_FILE, "r", encoding="utf-8") as f:
-            data = json.load(f)
-        return data.get("news", []) if isinstance(data.get("news"), list) else []
-    except (OSError, ValueError, TypeError):
-        return []
+        q=urllib.parse.urlencode({"client":"gtx","sl":"auto","tl":"zh-CN","dt":"t","q":text[:1200]})
+        req=urllib.request.Request(TRANSLATION_ENDPOINT+"?"+q,headers=HEADERS)
+        with urllib.request.urlopen(req,timeout=4) as r:
+            data=json.load(r)
+        translated="".join(p[0] for p in data[0] if p and p[0]).strip()
+        return translated if translated else text
+    except Exception:
+        return text
 
-def collect_queries(query_pairs, fetcher, workers=8, label="检索"):
-    """Run independent source queries concurrently so one slow endpoint cannot serialize the workflow."""
-    collected = []
-    succeeded = 0
-    def one(pair):
-        group, query = pair
-        try:
-            return group, fetcher(group, query), None
-        except Exception as exc:
-            return group, [], str(exc)[:160]
-    with ThreadPoolExecutor(max_workers=workers) as pool:
-        futures = [pool.submit(one, pair) for pair in query_pairs]
-        for fut in as_completed(futures):
-            group, rows, err = fut.result()
-            if err is None:
-                succeeded += 1
-                print(f"{group} [{label}]: {len(rows)} 条相关结果")
-                collected.extend(rows)
-            else:
-                print(f"{label}失败 [{group}]: {err}")
-    return collected, succeeded
+def fetch_google(group, query, source_type, chinese=False):
+    edition="&hl=zh-CN&gl=CN&ceid=CN:zh-Hans" if chinese else "&hl=en-US&gl=US&ceid=US:en"
+    url="https://news.google.com/rss/search?q="+urllib.parse.quote(query)+edition
+    req=urllib.request.Request(url,headers=HEADERS)
+    with urllib.request.urlopen(req,timeout=12) as r:
+        root=ET.fromstring(r.read())
+    rows=[]
+    for item in root.findall(".//item")[:60]:
+        title=clean(item.findtext("title"))
+        summary=clean(item.findtext("description"))
+        link=(item.findtext("link") or "").strip()
+        source=clean(item.findtext("source")) or group
+        text=title+" "+summary
+        if not title or not link or not is_tgv_relevant(text):
+            continue
+        rows.append({
+            "source_group":group,
+            "source_type":source_type,
+            "source":source,
+            "original_title":title,
+            "original_summary":summary if summary != title else "",
+            "date":parse_date(item.findtext("pubDate") or ""),
+            "url":link,
+        })
+    return rows
 
+def collect():
+    jobs=[]
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        for g,q in DOMESTIC_QUERIES:
+            jobs.append(pool.submit(fetch_google,g,q,"国内网站",True))
+        for g,q in FOREIGN_QUERIES:
+            jobs.append(pool.submit(fetch_google,g,q,"国外网站",False))
+        rows=[]
+        for f in as_completed(jobs):
+            try:
+                rows.extend(f.result())
+            except Exception as exc:
+                print("检索失败：",str(exc)[:120])
+    return rows
 
 def main():
-    previous = load_previous()
-    old_by_url = {n.get("url"): n for n in previous if isinstance(n, dict) and n.get("url")}
-    found, seen = [], set()
-    google_rows, successes = collect_queries(QUERIES, fetch, workers=8, label="Google News")
-    for row in google_rows:
-        if row["url"] not in seen:
-            seen.add(row["url"])
-            found.append(row)
+    rows=collect()
+    dedup={}
+    for r in rows:
+        key=(r["source_type"], re.sub(r"\W+","",r["original_title"].lower()))
+        if key not in dedup:
+            dedup[key]=r
+    rows=list(dedup.values())
 
-    web_rows, web_successes = collect_queries(WEB_QUERIES, lambda g,q: fetch_bing_web(g,q,require_wechat=True), workers=6, label="公开网页")
-    for row in web_rows:
-        if row["url"] not in seen:
-            seen.add(row["url"])
-            found.append(row)
+    # 仅翻译最新的国外标题，失败则直接保留原文，不阻塞采集。
+    foreign=[r for r in rows if r["source_type"]=="国外网站"]
+    foreign.sort(key=lambda x:x.get("date",""),reverse=True)
+    translate_targets=set(id(x) for x in foreign[:80])
 
-    sogou_rows, sogou_successes = collect_queries(SOGOU_WECHAT_QUERIES, fetch_sogou_wechat, workers=3, label="搜狗微信")
-    for row in sogou_rows:
-        if row["url"] not in seen:
-            seen.add(row["url"])
-            found.append(row)
-
-    try:
-        rss_rows = fetch_wechat2rss_watchlist()
-    except Exception as exc:
-        rss_rows = []
-        print(f"Wechat2RSS目录读取失败: {str(exc)[:120]}")
-    for row in rss_rows:
-        if row["url"] not in seen:
-            seen.add(row["url"])
-            found.append(row)
-    print(f"Wechat2RSS：发现 {len(rss_rows)} 条相关结果")
-
-    wechat_account_rows = fetch_wechat_accounts()
-    wechat_account_successes = len(WECHAT_ACCOUNTS)
-    for row in wechat_account_rows:
-        if row["url"] not in seen:
-            seen.add(row["url"])
-            found.append(row)
-    print(f"重点公众号白名单：发现 {len(wechat_account_rows)} 条公开索引结果")
-
-    arxiv_rows, arxiv_successes = collect_queries(ARXIV_QUERIES, fetch_arxiv, workers=3, label="arXiv直连")
-    for row in arxiv_rows:
-        if row["url"] not in seen:
-            seen.add(row["url"])
-            found.append(row)
-
-    if not found:
-        print("本次没有获取到相关新闻；保留现有数据。")
-        return
-
-    # Reuse translations from the existing archive even when the same article is rediscovered
-    # through a different aggregator URL. This avoids hundreds of repeated translation requests.
-    cache = {}
-    for item in previous:
-        if not isinstance(item, dict):
-            continue
-        ot, tt = item.get("original_title"), item.get("title")
-        osum, tsum = item.get("original_summary"), item.get("summary")
-        if ot and tt and translation_is_valid(ot, tt):
-            cache[ot] = tt
-        if osum and tsum and tsum != "聚合源未提供可靠摘要，请打开原文核实。" and translation_is_valid(osum, tsum):
-            cache[osum] = tsum
-        raw_t = item.get("source_original_title")
-        raw_s = item.get("source_original_summary")
-        if raw_t and item.get("title") and translation_is_valid(raw_t, item.get("title", "")):
-            cached_summary = item.get("summary", "")
-            if (not raw_s) or translation_is_valid((raw_s or "")[:700], cached_summary):
-                cache[raw_t + "\n<<<SUMMARY>>>\n" + (raw_s or "")[:700]] = item.get("title", "") + "\n<<<SUMMARY>>>\n" + cached_summary
-    # Translate title + summary together: one request per article instead of two.
-    SEP = "\n<<<SUMMARY>>>\n"
-    bundles = []
-    for row in found[:350]:
-        source_title = row.get("original_title", "")
-        source_summary = row.get("original_summary", "")[:700]
-        bundles.append(source_title + SEP + source_summary)
-    translate_many(bundles, cache, workers=4)
-
-    news = []
-    for row in found:
-        source_title = row["original_title"]
-        source_summary = row["original_summary"]
-        bundle = source_title + SEP + source_summary[:700]
-        translated_bundle = cache.get(bundle) or bundle
-        if SEP in translated_bundle:
-            title, summary = translated_bundle.split(SEP, 1)
-        else:
-            parts = re.split(r"<<<SUMMARY>>>", translated_bundle, maxsplit=1)
-            title = parts[0].strip()
-            summary = parts[1].strip() if len(parts) > 1 else ""
-        if not title:
-            title = source_title
-        if not summary:
-            summary = "聚合源未提供可靠摘要，请打开原文核实。" if not source_summary else source_summary[:700]
-        quality = classify_content(source_title + " " + source_summary)
+    news=[]
+    for r in rows:
+        raw_title=r["original_title"]
+        raw_summary=r["original_summary"]
+        title=translate_zh(raw_title) if id(r) in translate_targets else raw_title
+        summary=raw_summary
         news.append({
-            "title": title,
-            "original_title": title,
-            "source_original_title": source_title,
-            "summary": summary,
-            "original_summary": summary,
-            "source_original_summary": source_summary,
-            "date": row["date"],
-            "source": row["source"],
-            "source_group": row["source_group"],
-            "source_type": row.get("source_type", "产业资讯"),
-            "category": category_for(source_title + " " + source_summary),
-            "url": row["url"],
-            "translation_status": ("已翻译为简体中文；原始语言文本后台保留" if (not needs_zh_translation(title) and not needs_zh_translation(summary)) else "部分或全部翻译失败，保留原文"),
-            "relevance": row["relevance_level"] + "：关键词规则初筛通过，仍需人工核验",
-            "relevance_level": row["relevance_level"],
-            "topics": topic_for(source_title + " " + source_summary),
-            "content_type": quality["content_type"],
-            "quality_reason": quality["quality_reason"],
-            "quality_score": quality["quality_score"],
+            "title":title,
+            "original_title":raw_title,
+            "summary":summary,
+            "original_summary":raw_summary,
+            "date":r["date"],
+            "source":r["source"],
+            "source_group":r["source_group"],
+            "source_type":r["source_type"],
+            "category":classify(raw_title+" "+raw_summary),
+            "url":r["url"],
+            "translation_status":"已翻译标题" if title != raw_title else "原文",
+            "topics":["TGV/玻璃基板"],
+            "relevance_level":"核心相关",
         })
 
-    known = {n.get("url") for n in news}
-    for old in previous:
-        if not isinstance(old, dict) or not old.get("url") or old["url"] in known:
-            continue
-        searchable = " ".join(str(old.get(k, "")) for k in ("title", "original_title", "summary", "original_summary"))
-        level = relevance_level(searchable)
-        if level:
-            old["relevance_level"] = level
-            old["topics"] = topic_for(searchable)
-            if not old.get("source_type"):
-                old["source_type"] = "预印本" if any(k in str(old.get("source_group", "")) for k in ("arXiv", "TechRxiv", "Optica Open", "Research Square")) else "产业资讯"
-            old["relevance"] = level + "：历史记录通过关键词规则初筛，仍需人工核验"
-            quality = classify_content(searchable)
-            old["content_type"] = quality["content_type"]
-            old["quality_reason"] = quality["quality_reason"]
-            old["quality_score"] = quality["quality_score"]
-            news.append(old)
-            known.add(old["url"])
-    news.sort(key=lambda n: n.get("date", ""), reverse=True)
-    news = news[:2000]
-    temp = DATA_FILE + ".tmp"
-    with open(temp, "w", encoding="utf-8") as f:
-        json.dump({
-            "updated_at": datetime.now(timezone.utc).isoformat(),
-            "source_queries_succeeded": successes + web_successes + sogou_successes + wechat_account_successes + arxiv_successes,
-            "source_queries_total": len(QUERIES) + len(WEB_QUERIES) + len(SOGOU_WECHAT_QUERIES) + len(WECHAT_ACCOUNTS) + len(ARXIV_QUERIES),
-            "search_method": "AI high-speed optical interconnect monitoring: TGV/glass substrates, CPO/NPO/LPO, silicon photonics, optical engines, optical chips/devices, high-speed transceivers, scale-up/scale-out optical I/O, OCS and MicroLED optical interconnect; Multi-channel discovery: expanded global-English and Chinese Google News queries, free Sogou WeChat article search, free Wechat2RSS feeds when available, public-web WeChat fallback, direct arXiv API, plus official company and conference/institution discovery. Visible titles and summaries are translated to Simplified Chinese when translation succeeds; failures fall back to the original text so collection can finish reliably.",
-            "news": news
-        }, f, ensure_ascii=False, indent=2)
-    os.replace(temp, DATA_FILE)
-    direct_count = sum(1 for n in news if n.get("relevance_level") == "核心相关")
-    related_count = sum(1 for n in news if n.get("relevance_level") == "产业链相关")
-    types = {name: sum(1 for n in news if n.get("content_type") == name) for name in ("技术进展", "产业化进展", "市场观察", "待核验")}
-    print(f"完成：Google News {successes}/{len(QUERIES)}；搜狗微信 {sogou_successes}/{len(SOGOU_WECHAT_QUERIES)}；Wechat2RSS {len(rss_rows)} 条；公开网页 {web_successes}/{len(WEB_QUERIES)}；重点公众号兜底 {len(wechat_account_rows)} 条；arXiv {arxiv_successes}/{len(ARXIV_QUERIES)}；归档 {len(news)} 条；核心相关 {direct_count} 条，产业链相关 {related_count} 条。")
-    print("内容质量分类：" + "；".join(f"{k} {v} 条" for k, v in types.items()))
-    print("说明：微信公众号仅能发现被公开索引的文章；未被索引、需登录或受限制的文章不会保证采集到。")
+    news.sort(key=lambda x:x.get("date",""),reverse=True)
+    # 只保留有日期且 90 天内的归档，页面再提供 3/7/30 天筛选。
+    cutoff=datetime.now(timezone.utc).timestamp()-90*86400
+    kept=[]
+    for n in news:
+        try:
+            ts=datetime.strptime(n["date"],"%Y-%m-%d").replace(tzinfo=timezone.utc).timestamp()
+            if ts >= cutoff: kept.append(n)
+        except Exception:
+            pass
 
-if __name__ == "__main__":
+    tmp=DATA_FILE+".tmp"
+    with open(tmp,"w",encoding="utf-8") as f:
+        json.dump({
+            "updated_at":datetime.now(timezone.utc).isoformat(),
+            "scope":"TGV / Through-Glass Via / Glass Core Substrate only",
+            "news":kept[:1200]
+        },f,ensure_ascii=False,indent=2)
+    os.replace(tmp,DATA_FILE)
+    cn=sum(1 for n in kept if n["source_type"]=="国内网站")
+    foreign_n=sum(1 for n in kept if n["source_type"]=="国外网站")
+    print(f"完成：共 {len(kept)} 条；国内网站 {cn} 条；国外网站 {foreign_n} 条。")
+
+if __name__=="__main__":
     main()
