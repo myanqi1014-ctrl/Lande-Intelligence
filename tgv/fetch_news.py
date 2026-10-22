@@ -16,28 +16,56 @@ TRANSLATION_ENDPOINT = "https://translate.googleapis.com/translate_a/single"
 
 # 仅保留 TGV / 玻璃通孔 / 玻璃芯基板相关检索。
 DOMESTIC_QUERIES = [
+    # 泛检索：用于发现新来源
     ("国内·TGV", '(TGV OR 玻璃通孔 OR 玻璃互连孔 OR 玻璃芯基板 OR 玻璃中介层) 半导体 封装'),
     ("国内·玻璃基板", '("玻璃芯基板" OR "玻璃基板" OR "玻璃中介层") 半导体 先进封装'),
     ("国内·TGV工艺", '(TGV OR 玻璃通孔) (激光 OR 蚀刻 OR 金属化 OR 填孔 OR 电镀 OR 工艺)'),
     ("国内·TGV产业", '(TGV OR 玻璃芯基板) (量产 OR 产线 OR 设备 OR 客户 OR 投资 OR 封装)'),
-    ("国内·半导体行业观察", 'site:semiinsights.com (TGV OR 玻璃通孔 OR 玻璃芯基板)'),
+    ("国内·TGV设备", '(TGV OR 玻璃通孔 OR 玻璃芯基板) (设备 OR 激光钻孔 OR 检测 OR 电镀 OR CMP OR AOI)'),
+    ("国内·TGV企业", '(TGV OR 玻璃芯基板 OR 玻璃通孔) (京东方 OR 凯盛科技 OR 蓝思科技 OR 沃格光电 OR 帝尔激光 OR 大族激光 OR 通富微电 OR 长电科技)'),
+
+    # 重点国内公开网站：多数可被 Google News/公开搜索稳定索引
+    ("国内·未来半导体", 'site:fsemi.tech (TGV OR 玻璃通孔 OR 玻璃芯基板 OR 玻璃基板)'),
+    ("国内·电子与封装", 'site:ep.org.cn (TGV OR 玻璃通孔 OR 玻璃芯基板 OR 玻璃基板)'),
+    ("国内·证券时报", 'site:stcn.com (TGV OR 玻璃通孔 OR 玻璃芯基板 OR 玻璃基板)'),
+    ("国内·中国证券网", 'site:cnstock.com (TGV OR 玻璃通孔 OR 玻璃芯基板 OR 玻璃基板)'),
+    ("国内·微纳制造", 'site:nanoplatform.cn (TGV OR 玻璃通孔 OR 玻璃芯基板 OR 玻璃基板)'),
     ("国内·爱集微", 'site:ijiwei.com (TGV OR 玻璃通孔 OR 玻璃芯基板 OR 玻璃基板)'),
-    ("国内·电子工程专辑", 'site:eet-china.com (TGV OR 玻璃通孔 OR 玻璃芯基板)'),
-    ("国内·芯智讯", 'site:icsmart.cn (TGV OR 玻璃通孔 OR 玻璃芯基板)'),
-    ("国内·OFweek", 'site:ofweek.com (TGV OR 玻璃通孔 OR 玻璃芯基板)'),
+    ("国内·电子工程专辑", 'site:eet-china.com (TGV OR 玻璃通孔 OR 玻璃芯基板 OR 玻璃基板)'),
+    ("国内·芯智讯", 'site:icsmart.cn (TGV OR 玻璃通孔 OR 玻璃芯基板 OR 玻璃基板)'),
+    ("国内·OFweek", 'site:ofweek.com (TGV OR 玻璃通孔 OR 玻璃芯基板 OR 玻璃基板)'),
+    ("国内·全球半导体观察", 'site:dramexchange.com OR site:trendforce.cn (TGV OR 玻璃通孔 OR 玻璃芯基板 OR 玻璃基板)'),
+    ("国内·中国电子报", 'site:ce.cn OR site:cenews.com.cn (TGV OR 玻璃通孔 OR 玻璃芯基板 OR 玻璃基板)'),
+    ("国内·财联社", 'site:cls.cn (TGV OR 玻璃通孔 OR 玻璃芯基板 OR 玻璃基板)'),
+    ("国内·新浪财经", 'site:finance.sina.com.cn (TGV OR 玻璃通孔 OR 玻璃芯基板 OR 玻璃基板)'),
 ]
 
 FOREIGN_QUERIES = [
+    # 泛检索
     ("国外·TGV", '("through-glass via" OR "through glass via") semiconductor packaging'),
     ("国外·GlassCore", '("glass core substrate" OR "glass-core substrate") semiconductor packaging'),
     ("国外·GlassInterposer", '("glass interposer" OR "glass substrate") (semiconductor OR packaging OR interconnect)'),
     ("国外·TGVProcess", '("through-glass via" OR "glass core substrate") (laser drilling OR etching OR metallization OR plating OR fabrication)'),
     ("国外·TGVIndustry", '("through-glass via" OR "glass core substrate") (production OR qualification OR investment OR capacity OR customer)'),
-    ("国外·IEEE", 'site:ieee.org ("through-glass via" OR "glass core substrate")'),
+    ("国外·TGVEquipment", '("through-glass via" OR "glass core substrate") (equipment OR inspection OR plating OR laser OR CMP OR AOI)'),
+
+    # 海外产业媒体 / 研究机构 / 会议 / 企业
+    ("国外·ETNews", 'site:etnews.com OR site:en.etnews.com ("glass substrate" OR "glass core substrate" OR "through-glass via" OR TGV) semiconductor'),
+    ("国外·TheElec", 'site:thelec.net ("glass substrate" OR "glass core substrate" OR "through-glass via" OR TGV) semiconductor'),
+    ("国外·SemiconductorEngineering", 'site:semiengineering.com ("glass substrate" OR "glass core substrate" OR "through-glass via")'),
+    ("国外·3DInCites", 'site:3dincites.com ("glass substrate" OR "glass core substrate" OR "through-glass via")'),
+    ("国外·IEEE", 'site:ieee.org ("through-glass via" OR "glass core substrate" OR "glass interposer")'),
     ("国外·IMAPS", 'site:imaps.org ("through-glass via" OR "glass core substrate" OR "glass interposer")'),
     ("国外·ECTC", 'site:ectc.net ("through-glass via" OR "glass core substrate" OR "glass interposer")'),
-    ("国外·TheElec", 'site:thelec.net ("glass substrate" OR "glass core substrate" OR TGV) semiconductor'),
-    ("国外·SemiconductorEngineering", 'site:semiengineering.com ("glass substrate" OR "glass core substrate" OR "through-glass via")'),
+    ("国外·imec", 'site:imec-int.com ("glass substrate" OR "glass interposer" OR "through-glass via")'),
+    ("国外·Intel", 'site:intel.com ("glass substrate" OR "glass core substrate" OR "glass interposer")'),
+    ("国外·Corning", 'site:corning.com ("glass substrate" OR "glass interposer" OR "through-glass via") semiconductor'),
+    ("国外·AppliedMaterials", 'site:appliedmaterials.com ("glass substrate" OR "glass core substrate") advanced packaging'),
+    ("国外·SamsungElectroMechanics", 'site:samsungsem.com ("glass core substrate" OR "glass substrate") semiconductor'),
+    ("国外·SCHOTT", 'site:schott-pharma.com OR site:schott.com ("through-glass via" OR "glass substrate") semiconductor'),
+    ("国外·Harmotec", 'site:harmotec.com ("TGV" OR "glass substrate")'),
+    ("国外·AZoM", 'site:azom.com ("through-glass via" OR "glass core substrate")'),
+    ("国外·ResearchGate", 'site:researchgate.net ("through-glass via" OR "glass core substrate")'),
 ]
 
 STRONG_TERMS = [
