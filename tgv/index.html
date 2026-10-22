@@ -40,12 +40,6 @@ header{background:#122743;color:#fff;padding:28px max(22px,calc((100% - 1120px)/
       <option value="OCS/光交换">OCS/光交换</option>
       <option value="MicroLED光互联">MicroLED光互联</option>
     </select>
-    <select id="grade">
-      <option value="">全部来源等级</option>
-      <option value="A">A级来源</option>
-      <option value="B">B级来源</option>
-      <option value="C">C级来源</option>
-    </select>
     <select id="value">
       <option value="">全部情报价值</option>
       <option value="重点情报">重点情报</option>
@@ -109,10 +103,10 @@ function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){retur
 function safeUrl(v){try{var u=new URL(v);return ['https:','http:'].indexOf(u.protocol)>=0?u.href:''}catch(e){return ''}}
 function dayDiff(s){if(!/^\d{4}-\d{2}-\d{2}$/.test(s||''))return 99999;return (Date.now()-new Date(s+'T00:00:00Z').getTime())/86400000}
 function render(){
-  var q=$('q').value.trim().toLowerCase(),stype=$('stype').value,topic=$('topic').value,grade=$('grade').value,value=$('value').value,cat=$('cat').value,period=Number($('period').value);
+  var q=$('q').value.trim().toLowerCase(),stype=$('stype').value,topic=$('topic').value,value=$('value').value,cat=$('cat').value,period=Number($('period').value);
   var list=allNews.filter(function(n){
     var text=[n.title,n.original_title,n.summary,n.original_summary,n.source,n.source_group,n.category].join(' ').toLowerCase();
-    return (!stype||n.source_type===stype)&&(!topic||(n.topics||[]).indexOf(topic)>=0)&&(!grade||n.source_grade===grade)&&(!value||n.value_level===value)&&(!cat||n.category===cat)&&dayDiff(n.date)<=period&&text.indexOf(q)>=0;
+    return (!stype||n.source_type===stype)&&(!topic||(n.topics||[]).indexOf(topic)>=0)&&(!value||n.value_level===value)&&(!cat||n.category===cat)&&dayDiff(n.date)<=period&&text.indexOf(q)>=0;
   });
   list.sort(function(a,b){var dv=(b.value_score||0)-(a.value_score||0);return dv!==0?dv:(b.date||'').localeCompare(a.date||'')});
   $('count').textContent=list.length;
@@ -146,7 +140,7 @@ async function load(){
     $('list').innerHTML='<div class="empty">news.json 暂时无法读取，请稍后刷新。</div>';
   }
 }
-$('q').addEventListener('input',render);['stype','topic','grade','value','cat','period'].forEach(function(id){$(id).addEventListener('change',render)});
+$('q').addEventListener('input',render);['stype','topic','value','cat','period'].forEach(function(id){$(id).addEventListener('change',render)});
 $('refresh').addEventListener('click',load);load();
 </script>
 </body>
