@@ -55,6 +55,9 @@ DOMESTIC_QUERIES = [
     ("国内·ScaleUp", '(Scale-up OR Scale-out OR GPU互联) (光互联 OR CPO OR Optical I/O)'),
 
     # 国内产业/科技/财经公开网站
+    ("国内·半导体行业观察", 'site:semiinsights.com (TGV OR CPO OR 硅光 OR 光互联 OR 光模块 OR 玻璃基板)'),
+    ("国内·集邦咨询", 'site:trendforce.cn (TGV OR CPO OR 硅光 OR 光互联 OR 1.6T OR 光模块 OR 玻璃基板)'),
+    ("国内·DIGITIMES中文", 'site:digitimes.com.tw OR site:digitimes.com (CPO OR 硅光 OR 光互联 OR 光模块 OR 玻璃基板)'),
     ("国内·爱集微", 'site:ijiwei.com (TGV OR CPO OR 硅光 OR 光互联 OR 1.6T OR 光模块 OR OCS)'),
     ("国内·电子工程专辑", 'site:eet-china.com (TGV OR CPO OR 硅光 OR 光互联 OR 1.6T OR 光模块)'),
     ("国内·OFweek", 'site:ofweek.com (TGV OR CPO OR 硅光 OR 光互联 OR 1.6T OR 光模块)'),
@@ -115,6 +118,17 @@ FOREIGN_QUERIES = [
     ("国外·MicroLED", '(MicroLED OR "Micro-LED") ("optical interconnect" OR "optical communication")'),
 
     # 海外产业媒体
+    ("国外·DigiTimes", 'site:digitimes.com (TGV OR "glass substrate" OR "glass core substrate" OR CPO OR "silicon photonics" OR "optical interconnect" OR "optical I/O" OR 1.6T)'),
+    ("国外·EE Times", 'site:eetimes.com (CPO OR "silicon photonics" OR "optical interconnect" OR "optical I/O" OR "glass substrate" OR 1.6T)'),
+    ("国外·SemiconductorEngineering", 'site:semiengineering.com (CPO OR "silicon photonics" OR "optical interconnect" OR "glass substrate" OR "glass core substrate" OR photonics)'),
+    ("国外·TechInsights", 'site:techinsights.com (CPO OR "co-packaged optics" OR "silicon photonics" OR "optical interconnect" OR "glass substrate" OR photonics)'),
+    ("国外·YoleGroup", 'site:yolegroup.com (CPO OR "silicon photonics" OR "optical interconnect" OR "optical transceiver" OR "advanced packaging" OR "glass substrate")'),
+    ("国外·TrendForce", 'site:trendforce.com (CPO OR "silicon photonics" OR "optical transceiver" OR 1.6T OR "glass substrate" OR "advanced packaging")'),
+    ("国外·Omdia", 'site:omdia.tech.informa.com (CPO OR "silicon photonics" OR "optical interconnect" OR "optical transceiver" OR datacenter photonics)'),
+    ("国外·LightCounting", 'site:lightcounting.com (CPO OR "silicon photonics" OR "optical interconnect" OR 1.6T OR "optical transceiver")'),
+    ("国外·SemiAnalysis", 'site:semianalysis.com (CPO OR "optical interconnect" OR "silicon photonics" OR "scale-up" OR "scale-out" OR photonics)'),
+    ("国外·SemiWiki", 'site:semiwiki.com (CPO OR "silicon photonics" OR "optical interconnect" OR "glass substrate" OR photonics)'),
+    ("国外·SemiEngineeringPhotonics", 'site:semiengineering.com photonics (CPO OR silicon OR optical OR interconnect)'),
     ("国外·Lightwave", 'site:lightwaveonline.com (CPO OR silicon photonics OR optical interconnect OR 1.6T OR optical transceiver)'),
     ("国外·FibreSystems", 'site:fibre-systems.com (CPO OR silicon photonics OR optical interconnect OR 1.6T OR transceiver)'),
     ("国外·OpticsPhotonicsNews", 'site:optica-opn.org (CPO OR silicon photonics OR optical interconnect OR optical I/O)'),
@@ -154,6 +168,10 @@ FOREIGN_QUERIES = [
 
     # 会议/机构/研究
     ("国外·OFC", 'site:ofcconference.org (CPO OR optical interconnect OR silicon photonics OR optical I/O OR 1.6T)'),
+    ("国外·OIF", 'site:oiforum.com (CPO OR "optical I/O" OR "co-packaged optics" OR 1.6T OR CEI)'),
+    ("国外·CXLConsortium", 'site:computeexpresslink.org (optical OR photonic OR interconnect OR scale-up)'),
+    ("国外·EthernetAlliance", 'site:ethernetalliance.org (optical OR 800G OR 1.6T OR CPO OR LPO)'),
+    ("国外·OpenCompute", 'site:opencompute.org (optical interconnect OR CPO OR silicon photonics OR optical I/O)'),
     ("国外·ECOC", 'site:ecoc.org OR site:ecoc2026.org (CPO OR optical interconnect OR silicon photonics OR 1.6T)'),
     ("国外·ECTC", 'site:ectc.net (TGV OR glass substrate OR glass core substrate OR photonics)'),
     ("国外·IEEE", 'site:ieee.org (CPO OR optical interconnect OR silicon photonics OR glass core substrate OR TGV)'),
