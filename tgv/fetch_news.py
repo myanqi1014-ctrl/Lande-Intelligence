@@ -84,6 +84,15 @@ DOMESTIC_QUERIES = [
     ("国内·钛媒体", 'site:tmtpost.com (CPO OR 硅光 OR 光互联 OR 光模块 OR 玻璃基板)'),
     ("国内·搜狐科技", 'site:sohu.com (CPO OR 硅光 OR 光互联 OR 1.6T OR 光模块 OR TGV)'),
     ("国内·网易科技", 'site:163.com (CPO OR 硅光 OR 光互联 OR 1.6T OR 光模块 OR TGV)'),
+
+    # 招标网：公开项目/公告页定向检索（高级搜索需登录，因此不调用登录接口）
+    ("国内·招标网·TGV", 'site:zhaobiao.cn OR site:xm.zhaobiao.cn OR site:zb.zhaobiao.cn (TGV OR 玻璃通孔 OR 玻璃芯基板 OR 玻璃基板)'),
+    ("国内·招标网·CPO", 'site:zhaobiao.cn OR site:xm.zhaobiao.cn OR site:zb.zhaobiao.cn (CPO OR 共封装光学 OR 硅光 OR 硅光子)'),
+    ("国内·招标网·光互联", 'site:zhaobiao.cn OR site:xm.zhaobiao.cn OR site:zb.zhaobiao.cn (光互联 OR 光互连 OR Optical I/O OR 光通信)'),
+    ("国内·招标网·高速光模块", 'site:zhaobiao.cn OR site:xm.zhaobiao.cn OR site:zb.zhaobiao.cn (800G OR 1.6T OR 3.2T OR 光模块 OR 光收发)'),
+    ("国内·招标网·光芯片", 'site:zhaobiao.cn OR site:xm.zhaobiao.cn OR site:zb.zhaobiao.cn (磷化铟 OR InP OR DFB OR EML OR TFLN OR 薄膜铌酸锂 OR 光芯片)'),
+    ("国内·招标网·数据中心光通信", 'site:zhaobiao.cn OR site:xm.zhaobiao.cn OR site:zb.zhaobiao.cn (数据中心 光通信 OR 高速光模块 OR 硅光模块)'),
+
 ]
 
 FOREIGN_QUERIES = [
@@ -632,6 +641,8 @@ def main():
         raw_title=r["original_title"]
         title=translate_zh(raw_title) if id(r) in translate_ids else raw_title
         category=classify(raw_title+" "+r["original_summary"])
+        if "招标网" in r["source_group"]:
+            category="招投标/项目"
         grade=source_tier(r["source"], r["source_group"])
         value_level,value_score=intelligence_value(raw_title+" "+r["original_summary"], grade)
         event,key_point,impact=insight_fields(title, r["original_summary"], category, value_level)
