@@ -550,8 +550,32 @@ def _fetch_zhaobiao_detail(url):
     # Keep only a compact public-page snippet; paid/member-only fields are ignored.
     return date, text[:600]
 
+def _extract_page_date(page_text):
+    if not page_text:
+        return ""
+    patterns=[
+        r"(20\d{2})[年\-/\.](\d{1,2})[月\-/\.](\d{1,2})",
+        r"(20\d{2})\s*[-/]\s*(\d{1,2})\s*[-/]\s*(\d{1,2})",
+    ]
+    for p in patterns:
+        m=re.search(p,page_text)
+        if m:
+            try:
+                return f"{int(m.group(1)):04d}-{int(m.group(2)):02d}-{int(m.group(3)):02d}"
+            except Exception:
+                pass
+    return ""
+
+def _fetch_public_project_detail(url):
+    req=urllib.request.Request(url,headers=HEADERS)
+    with urllib.request.urlopen(req,timeout=8) as r:
+        raw=r.read()
+    page=_decode_web(raw)
+    text=clean(page)
+    return _extract_page_date(text), text[:700]
+
 def fetch_procurement_web(group, source_name, domain, query):
-    """Discover public procurement/project pages through normal web search, then keep only relevant public pages."""
+    """Discover public procurement/project pages, then open public detail pages to recover dates."""
     url="https://www.bing.com/search?"+urllib.parse.urlencode({
         "q":query,
         "count":40,
@@ -563,6 +587,7 @@ def fetch_procurement_web(group, source_name, domain, query):
 
     rows=[]
     seen=set()
+    dated=0
     for m in re.finditer(r'<li[^>]+class=["\'][^"\']*b_algo[^"\']*["\'][^>]*>(.*?)</li>', page, re.I|re.S):
         block=m.group(1)
         hm=re.search(r'<h2[^>]*>\s*<a[^>]+href=["\']([^"\']+)["\'][^>]*>(.*?)</a>', block, re.I|re.S)
@@ -577,26 +602,41 @@ def fetch_procurement_web(group, source_name, domain, query):
         seen.add(link)
         text=title+" "+summary
 
-        # Procurement results can be relevant even when the title only contains equipment terminology.
         topics=topic_for(text)
         procurement_terms=["光模块","光收发","800g","400g","1.6t","3.2t","硅光","cpo","光互联","光通信","roce","数据中心","智算","高性能计算","tgv","玻璃基板","光芯片"]
         if not topics and not any(k in text.lower() for k in procurement_terms):
             continue
 
         date=_extract_cn_date(summary)
+        detail_summary=summary
+
+        # Search snippets often omit publication dates; recover from the public detail page.
+        if not date:
+            try:
+                page_date,page_text=_fetch_public_project_detail(link)
+                if page_date:
+                    date=page_date
+                if page_text and len(detail_summary)<100:
+                    detail_summary=page_text[:500]
+            except Exception:
+                pass
+
+        if date:
+            dated+=1
+
         rows.append({
             "source_group":"招投标·"+group,
             "source_type":"国内网站",
             "source":source_name,
             "original_title":title,
-            "original_summary":summary,
+            "original_summary":detail_summary,
             "date":date,
             "url":link,
             "topics":topics if topics else ["AI光互联"]
         })
-    print(f"{source_name} [{group}]: {len(rows)} 条")
-    return rows
 
+    print(f"{source_name} [{group}]: 抓到 {len(rows)} 条，其中有日期 {dated} 条")
+    return rows
 
 def collect():
     jobs = []
@@ -861,10 +901,12 @@ def main():
         },f,ensure_ascii=False,indent=2)
     os.replace(tmp,DATA_FILE)
 
+    procurement_count=sum(1 for n in kept if str(n.get("source_group","")).startswith("招投标·"))
+    procurement_dated=sum(1 for n in kept if str(n.get("source_group","")).startswith("招投标·") and n.get("date"))
     cn=sum(1 for n in kept if n.get("source_type")=="国内网站")
     foreign_n=sum(1 for n in kept if n.get("source_type")=="国外网站")
     topic_stats={k:sum(1 for n in kept if k in n.get("topics",[])) for k in TOPIC_TERMS}
-    print(f"完成：归档 {len(kept)} 条；国内网站 {cn} 条；国外网站 {foreign_n} 条。")
+    print(f"完成：归档 {len(kept)} 条；国内网站 {cn} 条；国外网站 {foreign_n} 条；招投标 {procurement_count} 条（有日期 {procurement_dated} 条）。")
     print("主题："+"；".join(f"{k} {v}" for k,v in topic_stats.items()))
 
 if __name__=="__main__":
