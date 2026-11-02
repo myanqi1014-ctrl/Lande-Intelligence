@@ -457,13 +457,84 @@ def fetch_bing_news(group, query, source_type, chinese=False):
         })
     return rows
 
+def _extract_cn_date(text):
+    if not text:
+        return ""
+    m=re.search(r"(20\d{2})[年\-/\.](\d{1,2})[月\-/\.](\d{1,2})", text)
+    if not m:
+        return ""
+    try:
+        return f"{int(m.group(1)):04d}-{int(m.group(2)):02d}-{int(m.group(3)):02d}"
+    except Exception:
+        return ""
+
+def _fetch_zhaobiao_detail(url):
+    """Read a public Zhaobiao project page for publication date and a short visible description."""
+    req=urllib.request.Request(url,headers=HEADERS)
+    with urllib.request.urlopen(req,timeout=8) as r:
+        page=r.read().decode("utf-8","ignore")
+    text=clean(page)
+    date=_extract_cn_date(text)
+    # Keep only a compact public-page snippet; paid/member-only fields are ignored.
+    return date, text[:600]
+
+def fetch_zhaobiao_web(group, query, source_type="国内网站", chinese=True):
+    """Discover public Zhaobiao project pages via normal Bing web search, not News RSS."""
+    url="https://www.bing.com/search?"+urllib.parse.urlencode({
+        "q":query,
+        "format":"rss",
+        "setlang":"zh-Hans",
+        "count":30
+    })
+    req=urllib.request.Request(url,headers=HEADERS)
+    with urllib.request.urlopen(req,timeout=10) as r:
+        root=ET.fromstring(r.read())
+    rows=[]
+    seen=set()
+    for item in root.findall(".//item")[:30]:
+        title=clean(item.findtext("title"))
+        summary=clean(item.findtext("description"))
+        link=(item.findtext("link") or "").strip()
+        if not title or not link or "zhaobiao.cn" not in link.lower() or link in seen:
+            continue
+        seen.add(link)
+        text=title+" "+summary
+        topics=topic_for(text)
+        if not topics:
+            continue
+        date=_extract_cn_date(summary)
+        detail_summary=summary
+        if not date:
+            try:
+                page_date,page_text=_fetch_zhaobiao_detail(link)
+                date=page_date
+                if page_text and len(detail_summary)<80:
+                    detail_summary=page_text[:500]
+            except Exception:
+                pass
+        rows.append({
+            "source_group":group,
+            "source_type":source_type,
+            "source":"招标网",
+            "original_title":title,
+            "original_summary":detail_summary,
+            "date":date,
+            "url":link,
+            "topics":topics
+        })
+    print(f"{group} [招标网页]: {len(rows)} 条")
+    return rows
+
 def collect():
     jobs = []
     rows = []
     with ThreadPoolExecutor(max_workers=12) as pool:
         for g, q in DOMESTIC_QUERIES:
-            jobs.append(pool.submit(fetch_google, g, q, "国内网站", True))
-            jobs.append(pool.submit(fetch_bing_news, g, q, "国内网站", True))
+            if "招标网" in g:
+                jobs.append(pool.submit(fetch_zhaobiao_web, g, q, "国内网站", True))
+            else:
+                jobs.append(pool.submit(fetch_google, g, q, "国内网站", True))
+                jobs.append(pool.submit(fetch_bing_news, g, q, "国内网站", True))
         for g, q in FOREIGN_QUERIES:
             jobs.append(pool.submit(fetch_google, g, q, "国外网站", False))
             jobs.append(pool.submit(fetch_bing_news, g, q, "国外网站", False))
@@ -589,7 +660,7 @@ def dedupe_archive(records):
     return out
 
 def startup_self_check():
-    required = [topic_for, relevance_score, source_tier, intelligence_value, insight_fields, classify]
+    required = [topic_for, relevance_score, source_tier, intelligence_value, insight_fields, classify, fetch_zhaobiao_web]
     if any(not callable(fn) for fn in required):
         raise RuntimeError("collector helper initialization failed")
 
