@@ -424,36 +424,87 @@ def fetch_google(group, query, source_type, chinese=False):
         })
     return rows
 
-def fetch_bing_news(group, query, source_type, chinese=False):
-    market = "zh-CN" if chinese else "en-US"
-    url = "https://www.bing.com/news/search?" + urllib.parse.urlencode({
-        "q": query, "format": "rss", "setlang": market
-    })
-    req = urllib.request.Request(url, headers=HEADERS)
-    with urllib.request.urlopen(req, timeout=12) as r:
-        root = ET.fromstring(r.read())
-    rows = []
-    for item in root.findall(".//item")[:80]:
-        title = clean(item.findtext("title"))
-        summary = clean(item.findtext("description"))
-        link = (item.findtext("link") or "").strip()
-        if not title or not link:
+def _decode_web(raw):
+    for enc in ("utf-8","gb18030","gbk"):
+        try:
+            return raw.decode(enc)
+        except Exception:
+            pass
+    return raw.decode("utf-8","ignore")
+
+def _bing_html_results(page, group, source_type):
+    rows=[]
+    for m in re.finditer(r'<li[^>]+class=["\'][^"\']*b_algo[^"\']*["\'][^>]*>(.*?)</li>', page, re.I|re.S):
+        block=m.group(1)
+        hm=re.search(r'<h2[^>]*>\s*<a[^>]+href=["\']([^"\']+)["\'][^>]*>(.*?)</a>', block, re.I|re.S)
+        if not hm:
             continue
-        source = clean(item.findtext("source")) or group
-        if summary == title:
-            summary = ""
-        text = title + " " + summary
+        link=html.unescape(hm.group(1))
+        title=clean(hm.group(2))
+        sm=re.search(r'<p[^>]*>(.*?)</p>', block, re.I|re.S)
+        summary=clean(sm.group(1)) if sm else ""
+        if not title or not link.startswith(("http://","https://")):
+            continue
+        text=title+" "+summary
         if not is_relevant(text):
             continue
         rows.append({
-            "source_group": group + "·Bing",
-            "source_type": source_type,
-            "source": source,
-            "original_title": title,
-            "original_summary": summary,
-            "date": parse_date(item.findtext("pubDate") or ""),
-            "url": link,
-            "topics": topic_for(text)
+            "source_group":group+"·Bing",
+            "source_type":source_type,
+            "source":group.replace("国内·","").replace("国外·",""),
+            "original_title":title,
+            "original_summary":summary,
+            "date":"",
+            "url":link,
+            "topics":topic_for(text)
+        })
+    return rows[:80]
+
+def fetch_bing_news(group, query, source_type, chinese=False):
+    market="zh-CN" if chinese else "en-US"
+    url="https://www.bing.com/news/search?"+urllib.parse.urlencode({
+        "q":query,
+        "format":"rss",
+        "setlang":market
+    })
+    req=urllib.request.Request(url,headers=HEADERS)
+    with urllib.request.urlopen(req,timeout=10) as r:
+        raw=r.read()
+
+    # Bing sometimes returns HTML/anti-bot pages instead of RSS. Detect before XML parsing.
+    stripped=raw.lstrip()
+    if not (stripped.startswith(b"<?xml") or stripped.startswith(b"<rss") or stripped.startswith(b"<feed")):
+        page=_decode_web(raw)
+        return _bing_html_results(page,group,source_type)
+
+    try:
+        root=ET.fromstring(raw)
+    except ET.ParseError:
+        page=_decode_web(raw)
+        return _bing_html_results(page,group,source_type)
+
+    rows=[]
+    for item in root.findall(".//item")[:80]:
+        title=clean(item.findtext("title"))
+        summary=clean(item.findtext("description"))
+        link=(item.findtext("link") or "").strip()
+        if not title or not link:
+            continue
+        source=clean(item.findtext("source")) or group
+        if summary==title:
+            summary=""
+        text=title+" "+summary
+        if not is_relevant(text):
+            continue
+        rows.append({
+            "source_group":group+"·Bing",
+            "source_type":source_type,
+            "source":source,
+            "original_title":title,
+            "original_summary":summary,
+            "date":parse_date(item.findtext("pubDate") or ""),
+            "url":link,
+            "topics":topic_for(text)
         })
     return rows
 
@@ -479,23 +530,28 @@ def _fetch_zhaobiao_detail(url):
     return date, text[:600]
 
 def fetch_zhaobiao_web(group, query, source_type="国内网站", chinese=True):
-    """Discover public Zhaobiao project pages via normal Bing web search, not News RSS."""
+    """Discover public Zhaobiao project pages using Bing web search; tolerate RSS/HTML responses."""
     url="https://www.bing.com/search?"+urllib.parse.urlencode({
         "q":query,
-        "format":"rss",
-        "setlang":"zh-Hans",
-        "count":30
+        "count":30,
+        "setlang":"zh-Hans"
     })
     req=urllib.request.Request(url,headers=HEADERS)
     with urllib.request.urlopen(req,timeout=10) as r:
-        root=ET.fromstring(r.read())
+        page=_decode_web(r.read())
+
     rows=[]
     seen=set()
-    for item in root.findall(".//item")[:30]:
-        title=clean(item.findtext("title"))
-        summary=clean(item.findtext("description"))
-        link=(item.findtext("link") or "").strip()
-        if not title or not link or "zhaobiao.cn" not in link.lower() or link in seen:
+    for m in re.finditer(r'<li[^>]+class=["\'][^"\']*b_algo[^"\']*["\'][^>]*>(.*?)</li>', page, re.I|re.S):
+        block=m.group(1)
+        hm=re.search(r'<h2[^>]*>\s*<a[^>]+href=["\']([^"\']+)["\'][^>]*>(.*?)</a>', block, re.I|re.S)
+        if not hm:
+            continue
+        link=html.unescape(hm.group(1))
+        title=clean(hm.group(2))
+        sm=re.search(r'<p[^>]*>(.*?)</p>', block, re.I|re.S)
+        summary=clean(sm.group(1)) if sm else ""
+        if not title or "zhaobiao.cn" not in link.lower() or link in seen:
             continue
         seen.add(link)
         text=title+" "+summary
@@ -542,7 +598,7 @@ def collect():
             try:
                 rows.extend(f.result())
             except Exception as exc:
-                print("检索失败：", str(exc)[:120])
+                print("检索失败：", type(exc).__name__, str(exc)[:160])
     return rows
 
 def load_previous():
