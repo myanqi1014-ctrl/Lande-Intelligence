@@ -638,9 +638,119 @@ def fetch_procurement_web(group, source_name, domain, query):
     print(f"{source_name} [{group}]: 抓到 {len(rows)} 条，其中有日期 {dated} 条")
     return rows
 
+CCGP_LISTS = [
+    ("中国政府采购网·中央公开招标","https://www.ccgp.gov.cn/cggg/zygg/gkzb/"),
+    ("中国政府采购网·地方公开招标","https://www.ccgp.gov.cn/cggg/dfgg/gkzb/"),
+    ("中国政府采购网·中央竞争性磋商","https://www.ccgp.gov.cn/cggg/zygg/jzxcs/"),
+    ("中国政府采购网·地方竞争性磋商","https://www.ccgp.gov.cn/cggg/dfgg/jzxcs/"),
+]
+
+PROCUREMENT_KEYWORDS = [
+    "光模块","光收发","400g","800g","1.6t","3.2t",
+    "cpo","硅光","硅光子","光互联","光互连","光通信",
+    "光芯片","磷化铟","inp","dfb","eml","vcsel","tfln","薄膜铌酸锂",
+    "光纤激光器","光子集成","光子芯片","光电芯片",
+    "tgv","玻璃通孔","玻璃芯基板","玻璃基板","先进封装",
+    "roce","高速交换机","高性能计算","智算中心","gpu互联"
+]
+
+def _ccgp_page_url(base, page_no):
+    return base + ("index.htm" if page_no == 0 else f"index_{page_no}.htm")
+
+def _ccgp_parse_list(page, base, source_group):
+    rows=[]
+    # Each list item contains an anchor followed by "发布时间：YYYY-MM-DD HH:MM".
+    for m in re.finditer(
+        r'<li[^>]*>\s*<a[^>]+href=["\']([^"\']+)["\'][^>]*>(.*?)</a>\s*<span[^>]*>\s*发布时间[:：]\s*(20\d{2}-\d{2}-\d{2})',
+        page, re.I|re.S
+    ):
+        href=html.unescape(m.group(1))
+        title=clean(m.group(2))
+        date=m.group(3)
+        link=urllib.parse.urljoin(base,href)
+        low=(title or "").lower()
+        if not title or not any(k in low for k in PROCUREMENT_KEYWORDS):
+            continue
+
+        topics=topic_for(title)
+        if not topics:
+            # Procurement demand signals may be broader than news taxonomy.
+            if any(k in low for k in ["400g","800g","1.6t","3.2t","光模块","光收发"]):
+                topics=["高速光模块"]
+            elif any(k in low for k in ["硅光","光互联","光互连","光通信","roce","高速交换机","高性能计算","智算中心"]):
+                topics=["AI光互联"]
+            elif any(k in low for k in ["光芯片","磷化铟","inp","dfb","eml","vcsel","tfln","薄膜铌酸锂","光纤激光器","光子集成","光子芯片","光电芯片"]):
+                topics=["光芯片/器件"]
+            elif any(k in low for k in ["tgv","玻璃通孔","玻璃芯基板","玻璃基板","先进封装"]):
+                topics=["TGV/玻璃基板"]
+
+        rows.append({
+            "source_group":"招投标·"+source_group,
+            "source_type":"国内网站",
+            "source":"中国政府采购网",
+            "original_title":title,
+            "original_summary":"",
+            "date":date,
+            "url":link,
+            "topics":topics or ["AI光互联"]
+        })
+    return rows
+
+def fetch_ccgp_direct(days=12, max_pages=45):
+    """Directly read CCGP public list pages until they are older than the requested window."""
+    cutoff=(datetime.now(timezone.utc)-timedelta(days=days)).strftime("%Y-%m-%d")
+    rows=[]
+    for source_group,base in CCGP_LISTS:
+        source_rows=[]
+        # Fetch in small concurrent batches to keep runtime reasonable.
+        page_no=0
+        stop=False
+        while page_no < max_pages and not stop:
+            batch=list(range(page_no,min(page_no+6,max_pages)))
+            pages={}
+            with ThreadPoolExecutor(max_workers=6) as pool:
+                futs={pool.submit(_fetch_text_url,_ccgp_page_url(base,p)):p for p in batch}
+                for fut in as_completed(futs):
+                    p=futs[fut]
+                    try:
+                        pages[p]=fut.result()
+                    except Exception:
+                        pages[p]=""
+            oldest=None
+            for p in sorted(batch):
+                page=pages.get(p,"")
+                if not page:
+                    continue
+                parsed=_ccgp_parse_list(page,base,source_group)
+                source_rows.extend(parsed)
+                dates=re.findall(r"发布时间[:：]\s*(20\d{2}-\d{2}-\d{2})",clean(page))
+                if dates:
+                    d=min(dates)
+                    oldest=d if oldest is None or d<oldest else oldest
+            if oldest and oldest < cutoff:
+                stop=True
+            page_no += len(batch)
+
+        # Keep only recent window here; front-end still applies 1/3/10-day filters.
+        recent=[r for r in source_rows if r.get("date") and r["date"] >= cutoff]
+        rows.extend(recent)
+        print(f"{source_group} [直连]: {len(recent)} 条")
+    return rows
+
+def _fetch_text_url(url):
+    req=urllib.request.Request(url,headers=HEADERS)
+    with urllib.request.urlopen(req,timeout=10) as r:
+        return _decode_web(r.read())
+
 def collect():
     jobs = []
     rows = []
+    # Direct official procurement source: independent of search-engine indexing.
+    try:
+        rows.extend(fetch_ccgp_direct(days=12))
+    except Exception as exc:
+        print("中国政府采购网直连失败：", type(exc).__name__, str(exc)[:160])
+
     with ThreadPoolExecutor(max_workers=12) as pool:
         for g, q in DOMESTIC_QUERIES:
             jobs.append(pool.submit(fetch_google, g, q, "国内网站", True))
@@ -772,7 +882,7 @@ def dedupe_archive(records):
     return out
 
 def startup_self_check():
-    required = [topic_for, relevance_score, source_tier, intelligence_value, insight_fields, classify, fetch_procurement_web]
+    required = [topic_for, relevance_score, source_tier, intelligence_value, insight_fields, classify, fetch_procurement_web, fetch_ccgp_direct]
     if any(not callable(fn) for fn in required):
         raise RuntimeError("collector helper initialization failed")
 
