@@ -1,11 +1,17 @@
-name: TGV 技术情报每日更新
+name: 芯光互联每日更新
 on:
   schedule:
     # 06:00 Asia/Shanghai = 22:00 UTC on the previous day
     - cron: '0 22 * * *'
   workflow_dispatch:
+
 permissions:
   contents: write
+
+concurrency:
+  group: xinguang-intelligence-update
+  cancel-in-progress: true
+
 jobs:
   update-tgv:
     runs-on: ubuntu-latest
@@ -13,18 +19,48 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Collect TGV intelligence
+
+      - name: Collect 芯光互联 intelligence
         run: python tgv/fetch_news.py
-      - name: Commit updated TGV news archive
+
+      - name: Commit and push updated intelligence archive
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
           git add tgv/news.json
-          if ! git diff --cached --quiet; then
-            git commit -m "自动更新 TGV 技术情报"
-            git push
+
+          if git diff --cached --quiet; then
+            echo "No intelligence changes to commit."
+            exit 0
           fi
+
+          git commit -m "自动更新 芯光互联 技术情报"
+
+          # Other workflows also write to main. Sync/rebase before pushing,
+          # and retry if main changes again between fetch and push.
+          for attempt in 1 2 3; do
+            echo "Push attempt $attempt/3"
+            git fetch origin main
+
+            if ! git rebase origin/main; then
+              git rebase --abort || true
+              echo "Rebase conflict detected; stopping to avoid overwriting remote changes."
+              exit 1
+            fi
+
+            if git push origin HEAD:main; then
+              echo "Push succeeded."
+              exit 0
+            fi
+
+            sleep 3
+          done
+
+          echo "Push failed after 3 attempts."
+          exit 1
