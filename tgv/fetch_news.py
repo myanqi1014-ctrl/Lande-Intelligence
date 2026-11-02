@@ -638,109 +638,147 @@ def fetch_procurement_web(group, source_name, domain, query):
     print(f"{source_name} [{group}]: 抓到 {len(rows)} 条，其中有日期 {dated} 条")
     return rows
 
-CCGP_LISTS = [
-    ("中国政府采购网·中央公开招标","https://www.ccgp.gov.cn/cggg/zygg/gkzb/"),
-    ("中国政府采购网·地方公开招标","https://www.ccgp.gov.cn/cggg/dfgg/gkzb/"),
-    ("中国政府采购网·中央竞争性磋商","https://www.ccgp.gov.cn/cggg/zygg/jzxcs/"),
-    ("中国政府采购网·地方竞争性磋商","https://www.ccgp.gov.cn/cggg/dfgg/jzxcs/"),
+CCGP_SEARCH_URLS = [
+    "https://search.ccgp.gov.cn/bxsearch",
+    "http://search.ccgp.gov.cn/bxsearch",
 ]
 
-PROCUREMENT_KEYWORDS = [
-    "光模块","光收发","400g","800g","1.6t","3.2t",
-    "cpo","硅光","硅光子","光互联","光互连","光通信",
-    "光芯片","磷化铟","inp","dfb","eml","vcsel","tfln","薄膜铌酸锂",
-    "光纤激光器","光子集成","光子芯片","光电芯片",
-    "tgv","玻璃通孔","玻璃芯基板","玻璃基板","先进封装",
-    "roce","高速交换机","高性能计算","智算中心","gpu互联"
+CCGP_KEYWORDS = [
+    "光模块","800G","400G","1.6T","硅光","CPO","光互联","光芯片",
+    "光纤激光器","TGV","玻璃基板","高性能计算","智算中心","RoCE"
 ]
 
-def _ccgp_page_url(base, page_no):
-    return base + ("index.htm" if page_no == 0 else f"index_{page_no}.htm")
+def _ccgp_search_params(keyword, page_no, date_start, date_stop):
+    return {
+        "searchtype":"1",
+        "page_index":str(page_no),
+        "bidSort":"0",
+        "buyerName":"",
+        "projectId":"",
+        "pinMu":"0",
+        "bidType":"0",
+        "dbselect":"bidx",
+        "kw":keyword,
+        "start_time":date_start.replace("-",":"),
+        "end_time":date_stop.replace("-",":"),
+        "timeType":"6",
+        "displayZone":"",
+        "zoneId":"",
+        "pppStatus":"0",
+        "agentName":"",
+    }
 
-def _ccgp_parse_list(page, base, source_group):
+def _ccgp_fetch_search_html(keyword, page_no, date_start, date_stop):
+    params=_ccgp_search_params(keyword,page_no,date_start,date_stop)
+    last_error=None
+    for base in CCGP_SEARCH_URLS:
+        try:
+            url=base+"?"+urllib.parse.urlencode(params)
+            req=urllib.request.Request(url,headers={
+                **HEADERS,
+                "Accept":"text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                "Accept-Language":"zh-CN,zh;q=0.9",
+                "Referer":"https://www.ccgp.gov.cn/",
+            })
+            with urllib.request.urlopen(req,timeout=25) as r:
+                page=_decode_web(r.read())
+            if "访问过于频繁" in page or "频繁访问" in page:
+                raise RuntimeError("中国政府采购网提示访问过于频繁")
+            return page
+        except Exception as exc:
+            last_error=exc
+    raise last_error if last_error else RuntimeError("中国政府采购网搜索失败")
+
+def _ccgp_parse_search_page(page, keyword):
     rows=[]
-    # Each list item contains an anchor followed by "发布时间：YYYY-MM-DD HH:MM".
-    for m in re.finditer(
-        r'<li[^>]*>\s*<a[^>]+href=["\']([^"\']+)["\'][^>]*>(.*?)</a>\s*<span[^>]*>\s*发布时间[:：]\s*(20\d{2}-\d{2}-\d{2})',
-        page, re.I|re.S
-    ):
-        href=html.unescape(m.group(1))
-        title=clean(m.group(2))
-        date=m.group(3)
-        link=urllib.parse.urljoin(base,href)
-        low=(title or "").lower()
-        if not title or not any(k in low for k in PROCUREMENT_KEYWORDS):
+    # Official search results live in .vT-srch-result-list-bid; parse list items tolerantly.
+    m=re.search(r'<ul[^>]+class=["\'][^"\']*vT-srch-result-list-bid[^"\']*["\'][^>]*>(.*?)</ul>',page,re.I|re.S)
+    scope=m.group(1) if m else page
+    for li in re.findall(r'<li\b[^>]*>(.*?)</li>',scope,re.I|re.S):
+        am=re.search(r'<a\b[^>]+href=["\']([^"\']+)["\'][^>]*>(.*?)</a>',li,re.I|re.S)
+        if not am:
             continue
+        href=html.unescape(am.group(1))
+        title=clean(am.group(2))
+        if not title:
+            continue
+        link=href if href.startswith("http") else urllib.parse.urljoin("http://www.ccgp.gov.cn",href)
 
-        topics=topic_for(title)
+        span_text=""
+        sm=re.search(r'<span\b[^>]*>(.*?)</span>',li,re.I|re.S)
+        if sm:
+            span_text=clean(sm.group(1))
+        date=""
+        dm=re.search(r'(20\d{2})[.\-/](\d{1,2})[.\-/](\d{1,2})',span_text)
+        if dm:
+            date=f"{int(dm.group(1)):04d}-{int(dm.group(2)):02d}-{int(dm.group(3)):02d}"
+
+        text=title+" "+span_text
+        low=text.lower()
+        topics=topic_for(text)
         if not topics:
-            # Procurement demand signals may be broader than news taxonomy.
             if any(k in low for k in ["400g","800g","1.6t","3.2t","光模块","光收发"]):
                 topics=["高速光模块"]
-            elif any(k in low for k in ["硅光","光互联","光互连","光通信","roce","高速交换机","高性能计算","智算中心"]):
+            elif any(k in low for k in ["硅光","cpo","光互联","光互连","光通信","roce","高性能计算","智算中心"]):
                 topics=["AI光互联"]
-            elif any(k in low for k in ["光芯片","磷化铟","inp","dfb","eml","vcsel","tfln","薄膜铌酸锂","光纤激光器","光子集成","光子芯片","光电芯片"]):
+            elif any(k in low for k in ["光芯片","磷化铟","inp","dfb","eml","vcsel","tfln","薄膜铌酸锂","光纤激光器"]):
                 topics=["光芯片/器件"]
-            elif any(k in low for k in ["tgv","玻璃通孔","玻璃芯基板","玻璃基板","先进封装"]):
+            elif any(k in low for k in ["tgv","玻璃通孔","玻璃芯基板","玻璃基板"]):
                 topics=["TGV/玻璃基板"]
+        if not topics:
+            continue
 
         rows.append({
-            "source_group":"招投标·"+source_group,
+            "source_group":"招投标·中国政府采购网·"+keyword,
             "source_type":"国内网站",
             "source":"中国政府采购网",
             "original_title":title,
-            "original_summary":"",
+            "original_summary":span_text,
             "date":date,
             "url":link,
-            "topics":topics or ["AI光互联"]
+            "topics":topics,
         })
     return rows
 
-def fetch_ccgp_direct(days=12, max_pages=45):
-    """Directly read CCGP public list pages until they are older than the requested window."""
-    cutoff=(datetime.now(timezone.utc)-timedelta(days=days)).strftime("%Y-%m-%d")
+def fetch_ccgp_direct(days=12, max_pages=2):
+    """Direct keyword search against search.ccgp.gov.cn/bxsearch."""
+    end_dt=datetime.now(timezone.utc)
+    start_dt=end_dt-timedelta(days=days)
+    date_start=start_dt.strftime("%Y-%m-%d")
+    date_stop=end_dt.strftime("%Y-%m-%d")
     rows=[]
-    for source_group,base in CCGP_LISTS:
-        source_rows=[]
-        # Fetch in small concurrent batches to keep runtime reasonable.
-        page_no=0
-        stop=False
-        while page_no < max_pages and not stop:
-            batch=list(range(page_no,min(page_no+6,max_pages)))
-            pages={}
-            with ThreadPoolExecutor(max_workers=6) as pool:
-                futs={pool.submit(_fetch_text_url,_ccgp_page_url(base,p)):p for p in batch}
-                for fut in as_completed(futs):
-                    p=futs[fut]
-                    try:
-                        pages[p]=fut.result()
-                    except Exception:
-                        pages[p]=""
-            oldest=None
-            for p in sorted(batch):
-                page=pages.get(p,"")
-                if not page:
-                    continue
-                parsed=_ccgp_parse_list(page,base,source_group)
-                source_rows.extend(parsed)
-                dates=re.findall(r"发布时间[:：]\s*(20\d{2}-\d{2}-\d{2})",clean(page))
-                if dates:
-                    d=min(dates)
-                    oldest=d if oldest is None or d<oldest else oldest
-            if oldest and oldest < cutoff:
-                stop=True
-            page_no += len(batch)
+    seen=set()
 
-        # Keep only recent window here; front-end still applies 1/3/10-day filters.
-        recent=[r for r in source_rows if r.get("date") and r["date"] >= cutoff]
-        rows.extend(recent)
-        print(f"{source_group} [直连]: {len(recent)} 条")
+    # Warm up once; failure is non-fatal.
+    try:
+        req=urllib.request.Request("https://www.ccgp.gov.cn/",headers=HEADERS)
+        with urllib.request.urlopen(req,timeout=12) as r:
+            r.read(256)
+    except Exception:
+        pass
+
+    for kw in CCGP_KEYWORDS:
+        kw_rows=[]
+        for page_no in range(1,max_pages+1):
+            try:
+                page=_ccgp_fetch_search_html(kw,page_no,date_start,date_stop)
+                parsed=_ccgp_parse_search_page(page,kw)
+                if not parsed:
+                    break
+                for row in parsed:
+                    if row["url"] not in seen:
+                        seen.add(row["url"])
+                        kw_rows.append(row)
+            except Exception as exc:
+                print(f"中国政府采购网 [{kw}] 第{page_no}页失败: {type(exc).__name__} {str(exc)[:120]}")
+                break
+            # The site is sensitive to frequent access; keep a conservative interval.
+            __import__("time").sleep(3.2)
+        rows.extend(kw_rows)
+        print(f"中国政府采购网 [{kw}] [bxsearch直连]: {len(kw_rows)} 条")
+
+    print(f"中国政府采购网 [bxsearch直连] 合计: {len(rows)} 条")
     return rows
-
-def _fetch_text_url(url):
-    req=urllib.request.Request(url,headers=HEADERS)
-    with urllib.request.urlopen(req,timeout=10) as r:
-        return _decode_web(r.read())
 
 def collect():
     jobs = []
