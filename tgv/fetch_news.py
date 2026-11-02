@@ -85,14 +85,35 @@ DOMESTIC_QUERIES = [
     ("国内·搜狐科技", 'site:sohu.com (CPO OR 硅光 OR 光互联 OR 1.6T OR 光模块 OR TGV)'),
     ("国内·网易科技", 'site:163.com (CPO OR 硅光 OR 光互联 OR 1.6T OR 光模块 OR TGV)'),
 
-    # 招标网：公开项目/公告页定向检索（高级搜索需登录，因此不调用登录接口）
-    ("国内·招标网·TGV", 'site:zhaobiao.cn OR site:xm.zhaobiao.cn OR site:zb.zhaobiao.cn (TGV OR 玻璃通孔 OR 玻璃芯基板 OR 玻璃基板)'),
-    ("国内·招标网·CPO", 'site:zhaobiao.cn OR site:xm.zhaobiao.cn OR site:zb.zhaobiao.cn (CPO OR 共封装光学 OR 硅光 OR 硅光子)'),
-    ("国内·招标网·光互联", 'site:zhaobiao.cn OR site:xm.zhaobiao.cn OR site:zb.zhaobiao.cn (光互联 OR 光互连 OR Optical I/O OR 光通信)'),
-    ("国内·招标网·高速光模块", 'site:zhaobiao.cn OR site:xm.zhaobiao.cn OR site:zb.zhaobiao.cn (800G OR 1.6T OR 3.2T OR 光模块 OR 光收发)'),
-    ("国内·招标网·光芯片", 'site:zhaobiao.cn OR site:xm.zhaobiao.cn OR site:zb.zhaobiao.cn (磷化铟 OR InP OR DFB OR EML OR TFLN OR 薄膜铌酸锂 OR 光芯片)'),
-    ("国内·招标网·数据中心光通信", 'site:zhaobiao.cn OR site:xm.zhaobiao.cn OR site:zb.zhaobiao.cn (数据中心 光通信 OR 高速光模块 OR 硅光模块)'),
+]
 
+
+PROCUREMENT_QUERIES = [
+    # 中国政府采购网
+    ("中国政府采购网·光模块", "中国政府采购网", "ccgp.gov.cn", 'site:ccgp.gov.cn (光模块 OR 光收发 OR 800G OR 1.6T OR 100G OR 400G)'),
+    ("中国政府采购网·光互联", "中国政府采购网", "ccgp.gov.cn", 'site:ccgp.gov.cn (光互联 OR 光通信 OR 高速互联 OR 数据中心) (光模块 OR 交换机 OR GPU)'),
+    ("中国政府采购网·硅光", "中国政府采购网", "ccgp.gov.cn", 'site:ccgp.gov.cn (硅光 OR 硅光子 OR CPO OR 光芯片 OR 光学测试)'),
+
+    # 全国公共资源交易平台
+    ("全国公共资源交易平台·光模块", "全国公共资源交易平台", "ggzy.gov.cn", 'site:ggzy.gov.cn (光模块 OR 光收发 OR 800G OR 1.6T OR 400G)'),
+    ("全国公共资源交易平台·数据中心", "全国公共资源交易平台", "ggzy.gov.cn", 'site:ggzy.gov.cn (数据中心 OR 智算中心 OR 高性能计算) (光模块 OR 高速交换机 OR 光互联)'),
+
+    # 三大运营商采购平台
+    ("中国移动采购·光模块", "中国移动采购与招标网", "b2b.10086.cn", 'site:b2b.10086.cn (光模块 OR 800G OR 400G OR 1.6T OR 光收发)'),
+    ("中国移动采购·算力网络", "中国移动采购与招标网", "b2b.10086.cn", 'site:b2b.10086.cn (RoCE OR 数据中心 OR 智算 OR 400G OR 光互联)'),
+    ("中国电信采购·光模块", "中国电信阳光采购网", "caigou.chinatelecom.com.cn", 'site:caigou.chinatelecom.com.cn (光模块 OR 800G OR 400G OR 1.6T OR 光收发)'),
+    ("中国电信采购·数据中心", "中国电信阳光采购网", "caigou.chinatelecom.com.cn", 'site:caigou.chinatelecom.com.cn (数据中心 OR 智算 OR DCI OR RoCE) (光模块 OR 交换机 OR 光通信)'),
+    ("中国联通采购·光模块", "中国联通采购与招标网", "chinaunicombidding.cn", 'site:chinaunicombidding.cn (光模块 OR 800G OR 400G OR 1.6T OR 光收发)'),
+    ("中国联通采购·数据中心", "中国联通采购与招标网", "chinaunicombidding.cn", 'site:chinaunicombidding.cn (数据中心 OR 智算 OR RoCE OR 高速交换机) (光模块 OR 光通信)'),
+
+    # 中国招标投标公共服务平台
+    ("招标投标公共服务平台·光模块", "中国招标投标公共服务平台", "cebpubservice.cn", 'site:cebpubservice.cn (光模块 OR 800G OR 400G OR 1.6T OR 光通信)'),
+    ("招标投标公共服务平台·芯光", "中国招标投标公共服务平台", "cebpubservice.cn", 'site:cebpubservice.cn (硅光 OR CPO OR 光互联 OR 光芯片 OR TGV OR 玻璃基板)'),
+
+    # 招标网保留为补充聚合源
+    ("招标网·TGV", "招标网", "zhaobiao.cn", 'site:zhaobiao.cn OR site:xm.zhaobiao.cn OR site:zb.zhaobiao.cn (TGV OR 玻璃通孔 OR 玻璃芯基板 OR 玻璃基板)'),
+    ("招标网·CPO", "招标网", "zhaobiao.cn", 'site:zhaobiao.cn OR site:xm.zhaobiao.cn OR site:zb.zhaobiao.cn (CPO OR 共封装光学 OR 硅光 OR 硅光子)'),
+    ("招标网·光模块", "招标网", "zhaobiao.cn", 'site:zhaobiao.cn OR site:xm.zhaobiao.cn OR site:zb.zhaobiao.cn (800G OR 1.6T OR 3.2T OR 光模块 OR 光收发)'),
 ]
 
 FOREIGN_QUERIES = [
@@ -529,11 +550,11 @@ def _fetch_zhaobiao_detail(url):
     # Keep only a compact public-page snippet; paid/member-only fields are ignored.
     return date, text[:600]
 
-def fetch_zhaobiao_web(group, query, source_type="国内网站", chinese=True):
-    """Discover public Zhaobiao project pages using Bing web search; tolerate RSS/HTML responses."""
+def fetch_procurement_web(group, source_name, domain, query):
+    """Discover public procurement/project pages through normal web search, then keep only relevant public pages."""
     url="https://www.bing.com/search?"+urllib.parse.urlencode({
         "q":query,
-        "count":30,
+        "count":40,
         "setlang":"zh-Hans"
     })
     req=urllib.request.Request(url,headers=HEADERS)
@@ -551,49 +572,44 @@ def fetch_zhaobiao_web(group, query, source_type="国内网站", chinese=True):
         title=clean(hm.group(2))
         sm=re.search(r'<p[^>]*>(.*?)</p>', block, re.I|re.S)
         summary=clean(sm.group(1)) if sm else ""
-        if not title or "zhaobiao.cn" not in link.lower() or link in seen:
+        if not title or domain.lower() not in link.lower() or link in seen:
             continue
         seen.add(link)
         text=title+" "+summary
+
+        # Procurement results can be relevant even when the title only contains equipment terminology.
         topics=topic_for(text)
-        if not topics:
+        procurement_terms=["光模块","光收发","800g","400g","1.6t","3.2t","硅光","cpo","光互联","光通信","roce","数据中心","智算","高性能计算","tgv","玻璃基板","光芯片"]
+        if not topics and not any(k in text.lower() for k in procurement_terms):
             continue
+
         date=_extract_cn_date(summary)
-        detail_summary=summary
-        if not date:
-            try:
-                page_date,page_text=_fetch_zhaobiao_detail(link)
-                date=page_date
-                if page_text and len(detail_summary)<80:
-                    detail_summary=page_text[:500]
-            except Exception:
-                pass
         rows.append({
-            "source_group":group,
-            "source_type":source_type,
-            "source":"招标网",
+            "source_group":"招投标·"+group,
+            "source_type":"国内网站",
+            "source":source_name,
             "original_title":title,
-            "original_summary":detail_summary,
+            "original_summary":summary,
             "date":date,
             "url":link,
-            "topics":topics
+            "topics":topics if topics else ["AI光互联"]
         })
-    print(f"{group} [招标网页]: {len(rows)} 条")
+    print(f"{source_name} [{group}]: {len(rows)} 条")
     return rows
+
 
 def collect():
     jobs = []
     rows = []
     with ThreadPoolExecutor(max_workers=12) as pool:
         for g, q in DOMESTIC_QUERIES:
-            if "招标网" in g:
-                jobs.append(pool.submit(fetch_zhaobiao_web, g, q, "国内网站", True))
-            else:
-                jobs.append(pool.submit(fetch_google, g, q, "国内网站", True))
-                jobs.append(pool.submit(fetch_bing_news, g, q, "国内网站", True))
+            jobs.append(pool.submit(fetch_google, g, q, "国内网站", True))
+            jobs.append(pool.submit(fetch_bing_news, g, q, "国内网站", True))
         for g, q in FOREIGN_QUERIES:
             jobs.append(pool.submit(fetch_google, g, q, "国外网站", False))
             jobs.append(pool.submit(fetch_bing_news, g, q, "国外网站", False))
+        for g, source_name, domain, q in PROCUREMENT_QUERIES:
+            jobs.append(pool.submit(fetch_procurement_web, g, source_name, domain, q))
         for f in as_completed(jobs):
             try:
                 rows.extend(f.result())
@@ -716,7 +732,7 @@ def dedupe_archive(records):
     return out
 
 def startup_self_check():
-    required = [topic_for, relevance_score, source_tier, intelligence_value, insight_fields, classify, fetch_zhaobiao_web]
+    required = [topic_for, relevance_score, source_tier, intelligence_value, insight_fields, classify, fetch_procurement_web]
     if any(not callable(fn) for fn in required):
         raise RuntimeError("collector helper initialization failed")
 
@@ -768,7 +784,7 @@ def main():
         raw_title=r["original_title"]
         title=translate_zh(raw_title) if id(r) in translate_ids else raw_title
         category=classify(raw_title+" "+r["original_summary"])
-        if "招标网" in r["source_group"]:
+        if str(r.get("source_group","")).startswith("招投标·"):
             category="招投标/项目"
         grade=source_tier(r["source"], r["source_group"])
         value_level,value_score=intelligence_value(raw_title+" "+r["original_summary"], grade)
