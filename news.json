@@ -1,6 +1,20 @@
 {
-  "updated_at": "2026-11-16T07:49:11.031409+00:00",
+  "updated_at": "2026-11-17T08:57:15.423784+00:00",
   "news": [
+    {
+      "country": "叙利亚",
+      "category": "产业动态",
+      "title": "Syria, EU open partnership forum in Damascus to coordinate recovery and investment - سانا",
+      "date": "2026-11-17",
+      "source": "سانا",
+      "url": "https://news.google.com/rss/articles/CBMiTEFVX3lxTE9OdFBKbnlfWnBWOGxUTzdsWWdzTnRrX2M2aUY3bmJHSTNlTVZ2N21udDROTGNyaFdUQWtFZ0lwQlk3M3kwTXF5eWZnaGY?oc=5",
+      "summary": "Syria, EU open partnership forum in Damascus to coordinate recovery and investment سانا",
+      "original_title": "Syria, EU open partnership forum in Damascus to coordinate recovery and investment - سانا",
+      "original_summary": "Syria, EU open partnership forum in Damascus to coordinate recovery and investment سانا",
+      "translation_status": "翻译失败，保留原文",
+      "value": "待研判",
+      "action": "待核实新闻内容及招商价值"
+    },
     {
       "country": "沙特",
       "category": "项目机会",
@@ -2537,6 +2551,20 @@
     },
     {
       "country": "沙特",
+      "category": "中企动态",
+      "title": "沙特阿拉伯敦促中国合作伙伴投资、发展供应链 - 数据：沙特股市新闻和信息 - TASI",
+      "date": "2026-09-08",
+      "source": "ارقام : اخبار ومعلومات سوق الأسهم السعودي - تاسي",
+      "url": "https://news.google.com/rss/articles/CBMiakFVX3lxTE9YdDRFaTEzejEzaFBLM1hvTVBWNm1hNG83dlkwMS11YmRPeklvYy0xMG5jc2twbl8tenR0Zk9LazVvNWNhSTNsNTFyUXIzZUloY2ZZSlJHYkVJZVZKQ0tZSk5zd0hjekZGRGc?oc=5",
+      "summary": "沙特阿拉伯敦促中国合作伙伴投资、发展供应链 数字：沙特股市新闻和信息 - TASI",
+      "original_title": "Saudi Arabia urges Chinese partners to invest, develop supply chains - ارقام : اخبار ومعلومات سوق الأسهم السعودي - تاسي",
+      "original_summary": "Saudi Arabia urges Chinese partners to invest, develop supply chains ارقام : اخبار ومعلومات سوق الأسهم السعودي - تاسي",
+      "translation_status": "已翻译",
+      "value": "待研判",
+      "action": "待核实新闻内容及招商价值"
+    },
+    {
+      "country": "沙特",
       "category": "产业动态",
       "title": "沙特阿拉伯扩大 CNG 供应 - 中东石油和天然气",
       "date": "2026-09-08",
@@ -2559,20 +2587,6 @@
       "summary": "沙特阿拉伯在 2026 年投洽会上强调扩大与中国的伙伴关系 沙特通讯社",
       "original_title": "Saudi Arabia Highlights Expanding Partnership with China at CIFIT 2026 - وكالة الأنباء السعودية",
       "original_summary": "Saudi Arabia Highlights Expanding Partnership with China at CIFIT 2026 وكالة الأنباء السعودية",
-      "translation_status": "已翻译",
-      "value": "待研判",
-      "action": "待核实新闻内容及招商价值"
-    },
-    {
-      "country": "沙特",
-      "category": "中企动态",
-      "title": "沙特阿拉伯敦促中国合作伙伴投资、发展供应链 - 数据：沙特股市新闻和信息 - TASI",
-      "date": "2026-09-08",
-      "source": "ارقام : اخبار ومعلومات سوق الأسهم السعودي - تاسي",
-      "url": "https://news.google.com/rss/articles/CBMiakFVX3lxTE9YdDRFaTEzejEzaFBLM1hvTVBWNm1hNG83dlkwMS11YmRPeklvYy0xMG5jc2twbl8tenR0Zk9LazVvNWNhSTNsNTFyUXIzZUloY2ZZSlJHYkVJZVZKQ0tZSk5zd0hjekZGRGc?oc=5",
-      "summary": "沙特阿拉伯敦促中国合作伙伴投资、发展供应链 数字：沙特股市新闻和信息 - TASI",
-      "original_title": "Saudi Arabia urges Chinese partners to invest, develop supply chains - ارقام : اخبار ومعلومات سوق الأسهم السعودي - تاسي",
-      "original_summary": "Saudi Arabia urges Chinese partners to invest, develop supply chains ارقام : اخبار ومعلومات سوق الأسهم السعودي - تاسي",
       "translation_status": "已翻译",
       "value": "待研判",
       "action": "待核实新闻内容及招商价值"
@@ -3407,7 +3421,7 @@
       "country": "沙特",
       "category": "产业动态",
       "title": "沙特阿拉伯的投资吸引力吸引了全球制造商 - ASSARQ AL-AWSAT 中文",
-      "date": "2026-06-24",
+      "date": "2026-06-23",
       "source": "ASHARQ AL-AWSAT English",
       "url": "https://news.google.com/rss/articles/CBMisAFBVV95cUxNajAzRWhCbmRuVUF3Q0VGYXREc2FXclFTbzliSkJORmdRTUlWT05iNE8tZ2pVQXpBUWdoRHhvNGZTcElRLThFUXdrNUd3VFk4V0JwRWM4VnJSZ0RjV1RfY29vQWxNb2d4WlBnR0RvOVBXM1ZQclMwbUYtcklWeHJOVWZiRHRNLXBaYXk5SXRUR243MUdobjlobXM4dTMzaGZacXRhbEFWX1QxSkhQTWIwVg?oc=5",
       "summary": "沙特阿拉伯的投资吸引力吸引全球制造商 ASSARQ AL-AWSAT 中文",
@@ -3644,6 +3658,20 @@
     {
       "country": "叙利亚",
       "category": "项目机会",
+      "title": "Monthly Review – The New Syria Remains Far from Stability: Economic Reconstruction, Political Centralization, and Governance Challenges - Alma Research and Education Center",
+      "date": "2026-06-04",
+      "source": "Alma Research and Education Center",
+      "url": "https://news.google.com/rss/articles/CBMi6wFBVV95cUxNa2FfTGhSc0NpQjFFMDN6ck9NN1VfRDljS25HQl9BUkNHaDFNZlVQZnA1ZkxRMnNSb0NjdFllMXBwdEt2ZVNHd3M1N2ZuR0FiVmdpMndVY1lkVG12NFFGbVNFV2dXNE9tRjV6Ml9PYXkwRkxEUy1GZzByWHRPNUd3NGR6ZWRzQnpJb0VpdkJCdlp2SktXNGdrYTBDVXlxV1c0RDN3OVNvbGxxU01JOHVRR203UzdoUHFjX0ZDV1dwWklFYVBXNmt1ZHV1M1hsM2Vzak5GajA3NXlTS0tBcWxxakNvak1zUllwNUd3?oc=5",
+      "summary": "Monthly Review – The New Syria Remains Far from Stability: Economic Reconstruction, Political Centralization, and Governance Challenges Alma Research and Education Center",
+      "original_title": "Monthly Review – The New Syria Remains Far from Stability: Economic Reconstruction, Political Centralization, and Governance Challenges - Alma Research and Education Center",
+      "original_summary": "Monthly Review – The New Syria Remains Far from Stability: Economic Reconstruction, Political Centralization, and Governance Challenges Alma Research and Education Center",
+      "translation_status": "翻译失败，保留原文",
+      "value": "待研判",
+      "action": "待核实新闻内容及招商价值"
+    },
+    {
+      "country": "叙利亚",
+      "category": "项目机会",
       "title": "SEBCO通过桥梁和公路工程推进叙利亚基础设施项目",
       "date": "2026-05-27",
       "source": "سانا",
@@ -3834,6 +3862,20 @@
       "original_title": "World Bank Funding Aims To Rebuild Syria’s Broken Water System - Fanack Water",
       "original_summary": "World Bank Funding Aims To Rebuild Syria’s Broken Water System Fanack Water",
       "translation_status": "已翻译",
+      "value": "待研判",
+      "action": "待核实新闻内容及招商价值"
+    },
+    {
+      "country": "沙特",
+      "category": "项目机会",
+      "title": "Saudi Arabia signs Agreement of the Amiral Project to enhance Local Value chains - SaudiGulf Projects",
+      "date": "2026-04-24",
+      "source": "SaudiGulf Projects",
+      "url": "https://news.google.com/rss/articles/CBMiwAFBVV95cUxQcFVTWDBiN2ZGa3Jkb2U2SFFydVNRX1ZFekRCZGhPVEg5NTB0U2cwQzFBZjVSWFI2Mm1CZ2FJWk1iNWZVLTFSeWwtUlJOV2xGSVl0cS02RThmUlpvTG0xek5pYlR2bWkxRGVYcDN6VUhrUk9iNDdQb0lVVjZMaXJxazVGTjBOa0duRV9FdUtJclBEbnBfaHFGMnBodzVLMHNOSWVfcDlDQVZFQ3Nja1RuVGhkQUhWOVpRTUsycm1scXQ?oc=5",
+      "summary": "Saudi Arabia signs Agreement of the Amiral Project to enhance Local Value chains SaudiGulf Projects",
+      "original_title": "Saudi Arabia signs Agreement of the Amiral Project to enhance Local Value chains - SaudiGulf Projects",
+      "original_summary": "Saudi Arabia signs Agreement of the Amiral Project to enhance Local Value chains SaudiGulf Projects",
+      "translation_status": "翻译失败，保留原文",
       "value": "待研判",
       "action": "待核实新闻内容及招商价值"
     },
@@ -4063,20 +4105,6 @@
     },
     {
       "country": "沙特",
-      "category": "中企动态",
-      "title": "沙特阿拉伯贸易伙伴 2026：中国、印度、日本、美国等 - Vision2030.ai",
-      "date": "2026-02-23",
-      "source": "vision2030.ai",
-      "url": "https://news.google.com/rss/articles/CBMicEFVX3lxTE5vOFc0VnNHa3drNkpnY1UyUnp2bGlmY3F2bkRGN3NjbkVTT19XTk14MXVsWkFkMWRxcXBPVFFiQTF1ZlczVlMwWWkzVEp1RnZ4aEdXT011N1ZMMnZMbXdUR21BWEo2TXFqbWhkeE1aaTU?oc=5",
-      "summary": "沙特阿拉伯贸易伙伴 2026：中国、印度、日本、美国等vision2030.ai",
-      "original_title": "Saudi Arabia Trade Partners 2026: China, India, Japan, US & More - vision2030.ai",
-      "original_summary": "Saudi Arabia Trade Partners 2026: China, India, Japan, US & More vision2030.ai",
-      "translation_status": "已翻译",
-      "value": "待研判",
-      "action": "待核实新闻内容及招商价值"
-    },
-    {
-      "country": "沙特",
       "category": "产业动态",
       "title": "MODON 工业城市：36 个工业区推动沙特制造业多元化 - Vision2030.ai",
       "date": "2026-02-23",
@@ -4085,6 +4113,20 @@
       "summary": "MODON 工业城市：36 个工业区推动沙特制造业多元化 Vision2030.ai",
       "original_title": "MODON Industrial Cities: 36 Industrial Zones Driving Saudi Manufacturing Diversification - vision2030.ai",
       "original_summary": "MODON Industrial Cities: 36 Industrial Zones Driving Saudi Manufacturing Diversification vision2030.ai",
+      "translation_status": "已翻译",
+      "value": "待研判",
+      "action": "待核实新闻内容及招商价值"
+    },
+    {
+      "country": "沙特",
+      "category": "中企动态",
+      "title": "沙特阿拉伯贸易伙伴 2026：中国、印度、日本、美国等 - Vision2030.ai",
+      "date": "2026-02-23",
+      "source": "vision2030.ai",
+      "url": "https://news.google.com/rss/articles/CBMicEFVX3lxTE5vOFc0VnNHa3drNkpnY1UyUnp2bGlmY3F2bkRGN3NjbkVTT19XTk14MXVsWkFkMWRxcXBPVFFiQTF1ZlczVlMwWWkzVEp1RnZ4aEdXT011N1ZMMnZMbXdUR21BWEo2TXFqbWhkeE1aaTU?oc=5",
+      "summary": "沙特阿拉伯贸易伙伴 2026：中国、印度、日本、美国等vision2030.ai",
+      "original_title": "Saudi Arabia Trade Partners 2026: China, India, Japan, US & More - vision2030.ai",
+      "original_summary": "Saudi Arabia Trade Partners 2026: China, India, Japan, US & More vision2030.ai",
       "translation_status": "已翻译",
       "value": "待研判",
       "action": "待核实新闻内容及招商价值"
@@ -4114,6 +4156,20 @@
       "original_title": "Stada earmarks €85M to build out Middle East production hub in Saudi Arabia - Fierce Pharma",
       "original_summary": "Stada earmarks €85M to build out Middle East production hub in Saudi Arabia Fierce Pharma",
       "translation_status": "已翻译",
+      "value": "待研判",
+      "action": "待核实新闻内容及招商价值"
+    },
+    {
+      "country": "沙特",
+      "category": "项目机会",
+      "title": "Saudi minister launches $810m infrastructure and industrial projects - Arab News",
+      "date": "2026-02-17",
+      "source": "Arab News",
+      "url": "https://news.google.com/rss/articles/CBMirgFBVV95cUxPRkRESk9EYTl5eVNOWXpSR0JidmFadVMwODRQTWg5M3dpZ183U21ET283d0NxMUtsUWxEVVcwRnBjVXo4bGdxQk5qbHh0TlN6TTJveTJNbXBvdElrWEhqSWFBMmNqMm9zOEZFN19lWVZDTHA3dlBtcEhJR0MzanFUV0MxdkVtUVVFeG1BT3JXaktJZVVZa1FTTWtKS2gxZ0FJdUpiM1hYSU5zN3BPRHc?oc=5",
+      "summary": "Saudi minister launches $810m infrastructure and industrial projects Arab News",
+      "original_title": "Saudi minister launches $810m infrastructure and industrial projects - Arab News",
+      "original_summary": "Saudi minister launches $810m infrastructure and industrial projects Arab News",
+      "translation_status": "翻译失败，保留原文",
       "value": "待研判",
       "action": "待核实新闻内容及招商价值"
     },
@@ -4295,6 +4351,20 @@
       "summary": "HEC 2026 to showcase Saudi Arabia’s industrial transformation and heavy equipment investment under Vision 2030 Middle East Construction News",
       "original_title": "HEC 2026 to showcase Saudi Arabia’s industrial transformation and heavy equipment investment under Vision 2030 - Middle East Construction News",
       "original_summary": "HEC 2026 to showcase Saudi Arabia’s industrial transformation and heavy equipment investment under Vision 2030 Middle East Construction News",
+      "translation_status": "翻译失败，保留原文",
+      "value": "待研判",
+      "action": "待核实新闻内容及招商价值"
+    },
+    {
+      "country": "沙特",
+      "category": "产业动态",
+      "title": "Badawi Explores Cooperation with Saudi Arabia’s NEOM and SABIC - Egypt Oil & Gas",
+      "date": "2025-12-07",
+      "source": "Egypt Oil & Gas",
+      "url": "https://news.google.com/rss/articles/CBMitgFBVV95cUxNY1VHNktFbGJpaUNlVUFqc0hFeDRReHhyVmt6X0M5Sll1OTJaVGU1TmVJNUhfbS1janR0UnhqQ1hSVW1NR2NlN1dWbVk4cG9QMDdpdlFSZ2V6VzN3Q3V0TUF0aklKMGpMM1NQRjhuczFBbU5CU3lpMUFMMEsxeDlTaGUwREIyUjdaQ3F2MDJ5S1E1RXJtV2kxaFNVcmcxT3RFT3BaQ2w4Z0x4cjllMmtHd1pNNXRmQQ?oc=5",
+      "summary": "Badawi Explores Cooperation with Saudi Arabia’s NEOM and SABIC Egypt Oil & Gas",
+      "original_title": "Badawi Explores Cooperation with Saudi Arabia’s NEOM and SABIC - Egypt Oil & Gas",
+      "original_summary": "Badawi Explores Cooperation with Saudi Arabia’s NEOM and SABIC Egypt Oil & Gas",
       "translation_status": "翻译失败，保留原文",
       "value": "待研判",
       "action": "待核实新闻内容及招商价值"
